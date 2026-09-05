@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Ventaja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#0C1E2B;
+  --panel:#143142;
+  --line:#22485C;
+  --chalk:#EDEAE0;
+  --muted:#7E97A6;
+  --signal:#E8B33C;
+  --good:#5FB07A;
+  --bad:#D2685F;
+  --cond:'Barlow Condensed', 'Helvetica Neue', sans-serif;
+  --body:system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  margin:0;background:var(--night);color:var(--chalk);
+  font-family:var(--body);font-size:15px;line-height:1.5;
+  padding:0 0 64px;
+  padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);
+}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+
+header{padding:22px 0 14px;border-bottom:1px solid var(--line);margin-bottom:14px}
+h1{font-family:var(--cond);font-weight:700;font-size:40px;line-height:.95;margin:0;letter-spacing:.01em}
+header p{margin:6px 0 0;color:var(--muted);font-size:13px;max-width:44ch}
+
+.controls{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+input[type=date],input[type=number],input[type=text]{
+  background:var(--panel);border:1px solid var(--line);color:var(--chalk);
+  border-radius:6px;padding:9px 10px;font-family:var(--body);font-size:15px;min-width:0;
+}
+button{
+  background:var(--signal);color:#12242F;border:0;border-radius:6px;
+  padding:10px 16px;font-family:var(--cond);font-weight:600;font-size:18px;
+  letter-spacing:.02em;cursor:pointer;
+}
+button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+
+.status{color:var(--muted);font-size:13px;padding:10px 0}
+.status.err{color:var(--bad)}
+
+.game{border-top:1px solid var(--line);padding:14px 0}
+.game:last-child{border-bottom:1px solid var(--line)}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;cursor:pointer}
+.match{font-family:var(--cond);font-size:26px;font-weight:600;line-height:1.05}
+.match small{display:block;font-family:var(--body);font-size:12px;color:var(--muted);font-weight:400;margin-top:3px;line-height:1.35}
+.clock{font-family:var(--cond);font-size:17px;color:var(--muted);white-space:nowrap}
+
+.body{display:none;padding-top:14px}
+.game.open .body{display:block}
+
+.bar{height:34px;display:flex;border-radius:4px;overflow:hidden;background:var(--panel);margin:4px 0 10px}
+.bar span{display:flex;align-items:center;font-family:var(--cond);font-size:19px;font-weight:600;padding:0 9px;transition:flex-grow .5s ease}
+.bar .lead{background:var(--signal);color:#12242F}
+.bar .trail{background:var(--panel);color:var(--muted);justify-content:flex-end}
+
+table{width:100%;border-collapse:collapse;font-size:14px;margin:10px 0 4px}
+td,th{padding:6px 0;text-align:right;border-bottom:1px solid rgba(34,72,92,.55)}
+th:first-child,td:first-child{text-align:left;color:var(--muted);font-weight:400}
+th{font-family:var(--cond);font-size:17px;font-weight:600;color:var(--chalk)}
+td.n{font-family:var(--cond);font-size:18px;font-variant-numeric:tabular-nums}
+
+.calc{background:var(--panel);border-radius:6px;padding:12px;margin:12px 0;font-size:13px;color:var(--muted)}
+.calc div{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
+.calc b{font-family:var(--cond);font-size:17px;color:var(--chalk);font-weight:600;font-variant-numeric:tabular-nums}
+.calc .tot{border-top:1px solid var(--line);margin-top:6px;padding-top:8px;color:var(--chalk)}
+
+.verdict{font-family:var(--cond);font-size:22px;font-weight:600;margin:10px 0 2px}
+.verdict.no{color:var(--muted)}
+.verdict.ok{color:var(--signal)}
+.verdict.big{color:var(--good)}
+.note{font-size:13px;color:var(--muted);margin:2px 0 10px}
+
+.cmp{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.cmp input{width:96px}
+.cmp label{font-size:13px;color:var(--muted)}
+.cmp .out{font-family:var(--cond);font-size:19px}
+.cmp .out.si{color:var(--good)}
+.cmp .out.no{color:var(--bad)}
+
+.manual{margin-top:26px;border-top:1px solid var(--line);padding-top:16px}
+.manual h2{font-family:var(--cond);font-size:26px;margin:0 0 4px;font-weight:600}
+.grid{display:grid;grid-template-columns:1fr 84px 84px;gap:8px;align-items:center;margin-top:10px}
+.grid span{font-size:13px;color:var(--muted)}
+.grid input{width:100%}
+.grid .h{font-family:var(--cond);font-size:17px;color:var(--chalk);text-align:center}
+footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
+@media (prefers-reduced-motion:reduce){.bar span{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Ventaja</h1>
+  <p>Jala los juegos del día, las últimas 5 salidas de cada abridor y la ofensiva de cada equipo, y corre tu fórmula.</p>
+</header>
+
+<div class="controls">
+  <input type="date" id="fecha">
+  <button id="cargar">Cargar juegos</button>
+  <button class="ghost" id="limpiar">Borrar caché</button>
+</div>
+
+<div id="status" class="status">Escoge la fecha y dale a cargar.</div>
+<div id="slate"></div>
+
+<div class="manual">
+  <h2>Cálculo a mano</h2>
+  <p class="note">Si la API falla o quieres probar números tuyos, méte los seis valores.</p>
+  <div class="grid">
+    <span></span><div class="h">Visita</div><div class="h">Local</div>
+    <span>ERA abridor (últ. 5)</span><input type="number" step="0.01" id="m_era_a"><input type="number" step="0.01" id="m_era_h">
+    <span>Carreras por juego</span><input type="number" step="0.01" id="m_rg_a"><input type="number" step="0.01" id="m_rg_h">
+    <span>ERA bullpen</span><input type="number" step="0.01" id="m_bp_a"><input type="number" step="0.01" id="m_bp_h">
+  </div>
+  <div class="controls" style="margin-top:12px"><button id="calcular">Calcular</button></div>
+  <div id="manual_out"></div>
+</div>
+
+<footer>
+  Datos: MLB Stats API (statsapi.mlb.com), sin llave. El ERA de bullpen usa el split de relevistas del equipo; si no viene, cae al ERA general del equipo y te lo avisa. Techo duro 68% / piso 32%.
+</footer>
+
+</div>
+
+<script>
+const API='https://statsapi.mlb.com/api/v1';
+const cache={hit:{},pen:{},log:{}};
+
+/* ---------- fórmula ---------- */
+function ventaja(d){
+  // d: eraA, eraH, rgA, rgH, bpA, bpH  (A=visita, H=local)
+  const p1=(d.eraA-d.eraH)*0.65;
+  const p2=(d.rgH-d.rgA)*0.5;
+  const p3=(d.bpA-d.bpH)*0.25;
+  const p4=0.12;
+  const delta=p1+p2+p3+p4;
+  let pct=50+delta*17;
+  const capped=pct>68||pct<32;
+  pct=Math.max(32,Math.min(68,pct));
+  return {p1,p2,p3,p4,delta,pct,capped};
+}
+function american(p){
+  if(p>=50) return '-'+Math.round(p/(100-p)*100);
+  return '+'+Math.round((100-p)/p*100);
+}
+function implied(line){
+  const v=parseFloat(line);
+  if(!isFinite(v)||v===0) return null;
+  return v<0 ? (-v)/((-v)+100)*100 : 100/(v+100)*100;
+}
+function veredicto(pct){
+  const fav=Math.max(pct,100-pct);
+  const d=Math.abs(pct-50)/17;
+  if(d<0.50) return {cls:'no',txt:'Sin pick — ventaja de '+d.toFixed(2)+' carreras, por debajo de 0.50'};
+  if(fav>=64) return {cls:'big',txt:'Gran oportunidad'};
+  if(fav>=59) return {cls:'ok',txt:'Ventaja sólida'};
+  return {cls:'no',txt:'Zona gris — ventaja de '+d.toFixed(2)+' carreras pero el % no llega a 59'};
+}
+
+/* ---------- datos ---------- */
+async function j(url){
+  const r=await fetch(url);
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+}
+function ipToNum(ip){
+  if(ip==null) return 0;
+  const s=String(ip), n=parseFloat(s);
+  const dec=Math.round((n-Math.trunc(n))*10);
+  return Math.trunc(n)+(dec===1?1/3:dec===2?2/3:0);
+}
+async function ultimas5(id,year){
+  const k=id+'-'+year;
+  if(cache.log[k]) return cache.log[k];
+  const d=await j(`${API}/people/${id}/stats?stats=gameLog&group=pitching&season=${year}&gameType=R`);
+  const splits=(d.stats&&d.stats[0]&&d.stats[0].splits)||[];
+  const salidas=splits.filter(s=>+(s.stat.gamesStarted||0)===1);
+  const use=(salidas.length?salidas:splits).slice(-5);
+  let er=0,ip=0;
+  use.forEach(s=>{er+=+(s.stat.earnedRuns||0);ip+=ipToNum(s.stat.inningsPitched);});
+  const out={era: ip>0 ? er*9/ip : null, ip:ip, n:use.length, starts:salidas.length>0};
+  cache.log[k]=out; return out;
+}
+async function ofensiva(teamId,year){
+  const k=teamId+'-'+year;
+  if(cache.hit[k]) return cache.hit[k];
+  const d=await j(`${API}/teams/${teamId}/stats?stats=season&group=hitting&season=${year}&gameType=R`);
+  const s=d.stats&&d.stats[0]&&d.stats[0].splits&&d.stats[0].splits[0];
+  const st=s?s.stat:{};
+  const g=+(st.gamesPlayed||0), r=+(st.runs||0);
+  const out={rg: g>0 ? r/g : null, g:g};
+  cache.hit[k]=out; return out;
+}
+async function bullpen(teamId,year){
+  const k=teamId+'-'+year;
+  if(cache.pen[k]) return cache.pen[k];
+  let out={era:null,aprox:false};
+  try{
+    const d=await j(`${API}/teams/${teamId}/stats?stats=statSplits&sitCodes=rp&group=pitching&season=${year}&gameType=R`);
+    const s=d.stats&&d.stats[0]&&d.stats[0].splits&&d.stats[0].splits[0];
+    if(s&&s.stat&&s.stat.era!=null&&s.stat.era!=='-.--') out={era:parseFloat(s.stat.era),aprox:false};
+  }catch(e){}
+  if(out.era==null){
+    try{
+      const d=await j(`${API}/teams/${teamId}/stats?stats=season&group=pitching&season=${year}&gameType=R`);
+      const s=d.stats&&d.stats[0]&&d.stats[0].splits&&d.stats[0].splits[0];
+      if(s&&s.stat&&s.stat.era!=null) out={era:parseFloat(s.stat.era),aprox:true};
+    }catch(e){}
+  }
+  cache.pen[k]=out; return out;
+}
+
+/* ---------- render ---------- */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+const num=(v,d=2)=>v==null||!isFinite(v)?'—':v.toFixed(d);
+
+function hoyISO(){
+  const t=new Date(), p=n=>String(n).padStart(2,'0');
+  return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate());
+}
+$('fecha').value=hoyISO();
+
+async function cargar(){
+  const iso=$('fecha').value;
+  if(!iso){$('status').textContent='Falta la fecha.';return;}
+  const [y,m,d]=iso.split('-');
+  $('slate').innerHTML='';
+  $('status').className='status';
+  $('status').textContent='Buscando juegos…';
+  try{
+    const data=await j(`${API}/schedule?sportId=1&date=${m}/${d}/${y}&hydrate=probablePitcher,team`);
+    const games=(data.dates&&data.dates[0]&&data.dates[0].games)||[];
+    if(!games.length){$('status').textContent='No hay juegos de MLB ese día.';return;}
+    $('status').textContent=games.length+' juegos. Toca uno para correr la fórmula.';
+    games.forEach((g,i)=>$('slate').appendChild(fila(g,i,+y)));
+  }catch(e){
+    $('status').className='status err';
+    $('status').textContent='No se pudo cargar el calendario ('+e.message+'). Revisa la conexión o usa el cálculo a mano abajo.';
+  }
+}
+
+function fila(g,i,year){
+  const a=g.teams.away, h=g.teams.home;
+  const pa=a.probablePitcher, ph=h.probablePitcher;
+  const hora=new Date(g.gameDate).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  const el=document.createElement('div');
+  el.className='game';
+  el.innerHTML=`<div class="head">
+      <div class="match">${esc(a.team.name)} @ ${esc(h.team.name)}
+        <small>${esc(pa?pa.fullName:'Abridor por confirmar')} vs ${esc(ph?ph.fullName:'Abridor por confirmar')}</small>
+      </div>
+      <div class="clock">${hora}</div>
+    </div>
+    <div class="body"><div class="status">Cargando números…</div></div>`;
+  const head=el.querySelector('.head'), body=el.querySelector('.body');
+  let cargado=false;
+  head.addEventListener('click',async()=>{
+    el.classList.toggle('open');
+    if(cargado||!el.classList.contains('open')) return;
+    cargado=true;
+    if(!pa||!ph){body.innerHTML='<div class="status err">Todavía no hay abridores confirmados para este juego. Vuelve más tarde o mételo a mano abajo.</div>';return;}
+    try{
+      const [la,lh,oa,oh,ba,bh]=await Promise.all([
+        ultimas5(pa.id,year), ultimas5(ph.id,year),
+        ofensiva(a.team.id,year), ofensiva(h.team.id,year),
+        bullpen(a.team.id,year), bullpen(h.team.id,year)
+      ]);
+      body.innerHTML=detalle({g,a,h,pa,ph,la,lh,oa,oh,ba,bh});
+      conectarCmp(body);
+    }catch(e){
+      body.innerHTML='<div class="status err">Falló la carga de datos ('+esc(e.message)+'). Usa el cálculo a mano.</div>';
+    }
+  });
+  return el;
+}
+
+function detalle(x){
+  const {a,h,pa,ph,la,lh,oa,oh,ba,bh}=x;
+  if(la.era==null||lh.era==null||oa.rg==null||oh.rg==null||ba.era==null||bh.era==null)
+    return '<div class="status err">Faltan datos de temporada para este juego. Métele los números a mano abajo.</div>';
+
+  const r=ventaja({eraA:la.era,eraH:lh.era,rgA:oa.rg,rgH:oh.rg,bpA:ba.era,bpH:bh.era});
+  const pH=r.pct, pA=100-pH;
+  const homeLead=pH>=50;
+  const v=veredicto(pH);
+  const avisos=[];
+  if(!la.starts||!lh.starts) avisos.push('Uno de los abridores no tiene aperturas registradas — se usaron sus últimas apariciones.');
+  if(la.n<5||lh.n<5) avisos.push('Muestra corta: '+la.n+' y '+lh.n+' salidas disponibles.');
+  if(ba.aprox||bh.aprox) avisos.push('ERA de bullpen no disponible por split; se usó el ERA general del equipo.');
+  if(r.capped) avisos.push('El resultado crudo pasó del techo y quedó recortado en el límite.');
+
+  return `
+  <div class="bar">
+    <span class="${homeLead?'trail':'lead'}" style="flex-grow:${pA.toFixed(1)}">${pA.toFixed(1)}%</span>
+    <span class="${homeLead?'lead':'trail'}" style="flex-grow:${pH.toFixed(1)}">${pH.toFixed(1)}%</span>
+  </div>
+  <table>
+    <tr><th></th><th>${esc(a.team.abbreviation||a.team.name)}</th><th>${esc(h.team.abbreviation||h.team.name)}</th></tr>
+    <tr><td>ERA últ. ${la.n}/${lh.n} salidas</td><td class="n">${num(la.era)}</td><td class="n">${num(lh.era)}</td></tr>
+    <tr><td>Innings en esas salidas</td><td class="n">${num(la.ip,1)}</td><td class="n">${num(lh.ip,1)}</td></tr>
+    <tr><td>Carreras por juego</td><td class="n">${num(oa.rg)}</td><td class="n">${num(oh.rg)}</td></tr>
+    <tr><td>ERA bullpen${(ba.aprox||bh.aprox)?' *':''}</td><td class="n">${num(ba.era)}</td><td class="n">${num(bh.era)}</td></tr>
+    <tr><td>Cuota justa</td><td class="n">${american(pA)}</td><td class="n">${american(pH)}</td></tr>
+  </table>
+  ${desglose(r,a,h)}
+  <div class="verdict ${v.cls}">${v.txt}</div>
+  ${avisos.length?'<div class="note">'+avisos.map(esc).join(' ')+'</div>':''}
+  ${bloqueCmp(pA,pH,a,h)}`;
+}
+
+function desglose(r,a,h){
+  const A=esc(a.team.abbreviation||a.team.name), H=esc(h.team.abbreviation||h.team.name);
+  return `<div class="calc">
+    <div><span>Abridores × 0.65</span><b>${r.p1>=0?'+':''}${r.p1.toFixed(3)}</b></div>
+    <div><span>Ofensivas × 0.50</span><b>${r.p2>=0?'+':''}${r.p2.toFixed(3)}</b></div>
+    <div><span>Bullpens × 0.25</span><b>${r.p3>=0?'+':''}${r.p3.toFixed(3)}</b></div>
+    <div><span>Localía</span><b>+0.120</b></div>
+    <div class="tot"><span>Δ carreras a favor de ${r.delta>=0?H:A}</span><b>${Math.abs(r.delta).toFixed(3)}</b></div>
+    <div><span>50% + (Δ × 17)</span><b>${(50+r.delta*17).toFixed(1)}%</b></div>
+  </div>`;
+}
+
+function bloqueCmp(pA,pH,a,h){
+  const A=esc(a.team.abbreviation||a.team.name), H=esc(h.team.abbreviation||h.team.name);
+  return `<div class="cmp" data-pa="${pA}" data-ph="${pH}">
+    <label>Cuota del book — ${A}</label><input type="number" class="ca" placeholder="+135">
+    <label>${H}</label><input type="number" class="ch" placeholder="-155">
+    <div class="out"></div>
+  </div>`;
+}
+
+function conectarCmp(root){
+  root.querySelectorAll('.cmp').forEach(box=>{
+    const pA=+box.dataset.pa, pH=+box.dataset.ph, out=box.querySelector('.out');
+    const ev=()=>{
+      const ia=implied(box.querySelector('.ca').value);
+      const ih=implied(box.querySelector('.ch').value);
+      const msgs=[];
+      if(ia!=null) msgs.push(pA>ia ? `Visita: valor (paga ${ia.toFixed(1)}%, tú das ${pA.toFixed(1)}%)` : `Visita: sin valor (${ia.toFixed(1)}% vs ${pA.toFixed(1)}%)`);
+      if(ih!=null) msgs.push(pH>ih ? `Local: valor (paga ${ih.toFixed(1)}%, tú das ${pH.toFixed(1)}%)` : `Local: sin valor (${ih.toFixed(1)}% vs ${pH.toFixed(1)}%)`);
+      out.className='out '+(msgs.some(m=>m.includes(': valor'))?'si':'no');
+      out.textContent=msgs.join(' · ');
+    };
+    box.querySelectorAll('input').forEach(i=>i.addEventListener('input',ev));
+  });
+}
+
+/* ---------- manual ---------- */
+$('calcular').addEventListener('click',()=>{
+  const g=id=>parseFloat($(id).value);
+  const d={eraA:g('m_era_a'),eraH:g('m_era_h'),rgA:g('m_rg_a'),rgH:g('m_rg_h'),bpA:g('m_bp_a'),bpH:g('m_bp_h')};
+  if(Object.values(d).some(v=>!isFinite(v))){
+    $('manual_out').innerHTML='<div class="status err">Faltan valores. Llena las seis casillas.</div>';return;
+  }
+  const r=ventaja(d), pH=r.pct, pA=100-pH, v=veredicto(pH);
+  $('manual_out').innerHTML=`
+    <div class="bar">
+      <span class="${pH>=50?'trail':'lead'}" style="flex-grow:${pA.toFixed(1)}">Visita ${pA.toFixed(1)}%</span>
+      <span class="${pH>=50?'lead':'trail'}" style="flex-grow:${pH.toFixed(1)}">Local ${pH.toFixed(1)}%</span>
+    </div>
+    ${desglose(r,{team:{abbreviation:'Visita'}},{team:{abbreviation:'Local'}})}
+    <table><tr><th></th><th>Visita</th><th>Local</th></tr>
+    <tr><td>Cuota justa</td><td class="n">${american(pA)}</td><td class="n">${american(pH)}</td></tr></table>
+    <div class="verdict ${v.cls}">${v.txt}</div>
+    ${r.capped?'<div class="note">El resultado crudo pasó del techo y quedó recortado en el límite.</div>':''}
+    ${bloqueCmp(pA,pH,{team:{abbreviation:'Visita'}},{team:{abbreviation:'Local'}})}`;
+  conectarCmp($('manual_out'));
+});
+
+$('cargar').addEventListener('click',cargar);
+$('limpiar').addEventListener('click',()=>{
+  cache.hit={};cache.pen={};cache.log={};
+  $('status').className='status';
+  $('status').textContent='Caché borrado. Dale a cargar otra vez.';
+});
+</script>
+</body>
+</html>
