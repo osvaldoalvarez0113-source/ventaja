@@ -96,6 +96,14 @@ footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
 </div>
 
 <div class="modo">
+  <label for="mult">Carreras → porcentaje:</label>
+  <select id="mult">
+    <option value="13" selected>× 13 (lo que da la matemática)</option>
+    <option value="17">× 17 (tu número original)</option>
+  </select>
+</div>
+
+<div class="modo">
   <label for="modo">ERA del abridor:</label>
   <select id="modo">
     <option value="mix" selected>Mezcla 70 temporada / 30 últimas 5</option>
@@ -125,7 +133,13 @@ footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
   Datos: MLB Stats API. El ganador sale de tu fórmula de ventaja. El hándicap, el total y los ponches
   salen de una distribución de Poisson montada sobre esas mismas carreras esperadas, así que los cuatro
   mercados cuentan la misma historia. El total usa la misma tabla de park factors y la misma amortiguación al 60% que contexto_juego.py de Betbot,
-  más la temperatura real de Open-Meteo a la hora del juego. El viento se muestra pero no se calcula: hace falta
+  más la temperatura real de Open-Meteo a la hora del juego. El multiplicador de carreras a porcentaje viene por defecto en ×13, que es lo que dan Poisson y Pythagorean
+  para una diferencia de carreras dada; ×17 era el número original y se puede escoger arriba para comparar.
+  Al total se le suman 0.18 carreras por los innings extra, que ocurren en cerca de uno de cada once juegos y
+  el modelo de nueve innings no cuenta. El bullpen quemado se mide contra la fecha oficial local del juego.
+  Las carreras esperadas de cada equipo salen de multiplicar su ofensiva por lo que permite el staff rival
+  y dividir entre el promedio de la liga, no de promediar los dos números — así un abridor de élite baja el
+  total de verdad en vez de quedarse anclado a la media. El viento se muestra pero no se calcula: hace falta
   la orientación del jardín central de cada parque y ese dato no existe todavía en ningún lado.
   Los splits L/R escalan las carreras por juego con tope de ±10%. El bullpen quemado usa los mismos
   escalones que ajustar_ml() de Betbot: −2 puntos si dos o más relevistas lanzaron dos días seguidos,
@@ -140,6 +154,9 @@ var cache={hit:{},pen:{},log:{},sea:{},mano:{},split:{},quem:{},reg:{}};
 var MODO='mix';
 var K_LIGA=null;
 var LIGA_ERA=null;
+var LIGA_RG=null;
+var MULT=13;
+var EXTRAS=0.18;  /* carreras que aportan los innings extra */
 /* Park factors por venue_id — misma tabla que contexto_juego.py de Betbot.
    [nombre, factor, techo]. techo: abierto | retractil | techo (cerrado fijo). */
 var PARK={
@@ -198,7 +215,7 @@ function matriz(la,lh,fn){
 function ventaja(d){
   var p1=(d.eraA-d.eraH)*0.65, p2=(d.rgH-d.rgA)*0.5, p3=(d.bpA-d.bpH)*0.25;
   var delta=p1+p2+p3+0.12;
-  var pct=50+delta*17;
+  var pct=50+delta*MULT;
   var capped=pct>68||pct<32;
   pct=Math.max(32,Math.min(68,pct));
   return {p1:p1,p2:p2,p3:p3,delta:delta,pct:pct,capped:capped};
@@ -315,6 +332,12 @@ function splitEquipo(teamId,m,year){
 }
 function ymd(dt){ var p=function(n){return String(n).padStart(2,'0');};
   return dt.getUTCFullYear()+'-'+p(dt.getUTCMonth()+1)+'-'+p(dt.getUTCDate()); }
+/* officialDate es la fecha LOCAL del juego segun la MLB. Usarla evita que un
+   juego nocturno en la costa oeste cuente "ayer" como el dia del juego mismo. */
+function diaBase(oficial){
+  var pt=String(oficial).split('-');
+  return new Date(Date.UTC(+pt[0], +pt[1]-1, +pt[2], 12, 0, 0));
+}
 function quemados(teamId,baseDate){
   var k=teamId+'-'+ymd(baseDate);
   if(cache.quem[k]) return Promise.resolve(cache.quem[k]);
@@ -423,9 +446,13 @@ function kLiga(year){
   if(K_LIGA!=null) return Promise.resolve(K_LIGA);
   return j(API+'/teams/stats?stats=season&group=hitting&season='+year+'&sportIds=1&gameType=R').then(function(d){
     var sp=(d.stats&&d.stats[0]&&d.stats[0].splits)||[];
-    var pa=0, so=0;
-    sp.forEach(function(s){ pa+=+(s.stat.plateAppearances||0); so+=+(s.stat.strikeOuts||0); });
+    var pa=0, so=0, rr=0, gg=0;
+    sp.forEach(function(s){
+      pa+=+(s.stat.plateAppearances||0); so+=+(s.stat.strikeOuts||0);
+      rr+=+(s.stat.runs||0);            gg+=+(s.stat.gamesPlayed||0);
+    });
     K_LIGA = pa>0 ? so/pa : 0.225;
+    LIGA_RG = gg>0 ? rr/gg : 4.30;
     return K_LIGA;
   }).catch(function(){ K_LIGA=0.225; return K_LIGA; });
 }
@@ -501,6 +528,7 @@ function contexto(x,pfv,Tbase,T,notaTemp){
   }else{
     o+='<tr><td>Clima</td><td class="n" colspan="2">no disponible</td></tr>';
   }
+  o+='<tr><td>Innings extra</td><td class="n" colspan="2">+'+EXTRAS.toFixed(2)+' carreras</td></tr>';
   o+='<tr><td>Total: crudo → ajustado</td><td class="n" colspan="2">'+num(Tbase,1)+' → '+num(T,1)+'</td></tr>';
   if(!PARK[x.venueId]) o+='<tr><td>Aviso</td><td class="n" colspan="2">parque no está en la tabla — sin ajuste</td></tr>';
   o+='</table>';
@@ -562,7 +590,7 @@ function fila(g,year){
     var techo=pkinfo?pkinfo[2]:((v.fieldInfo&&v.fieldInfo.roofType)||'');
     var cerrado=(techo==='techo')||/dome|indoor/i.test(techo);
     var pw=(loc&&!cerrado)?clima(loc.latitude,loc.longitude,new Date(g.gameDate).getTime()):Promise.resolve(null);
-    var fecha=new Date(g.gameDate);
+    var fecha=diaBase(g.officialDate||g.gameDate.slice(0,10));
     Promise.all([ultimas5(pa.id,year),ultimas5(ph.id,year),temporada(pa.id,year),temporada(ph.id,year),
       ofensiva(a.team.id,year),ofensiva(h.team.id,year),bullpen(a.team.id,year),bullpen(h.team.id,year),
       kLiga(year),ligaEra(year),pw,mano(pa.id),mano(ph.id),
@@ -628,13 +656,18 @@ function detalle(x){
   var nomA=esc(a.team.abbreviation||a.team.name), nomH=esc(h.team.abbreviation||h.team.name);
   var gana=homeLead?h.team.name:a.team.name;
   var abrGana=homeLead?nomH:nomA, abrPierde=homeLead?nomA:nomH;
-  var pctGana=Math.max(pA,pH), vc=Math.abs(pctGana-50)/17;
+  var pctGana=Math.max(pA,pH), vc=Math.abs(pctGana-50)/MULT;
 
-  /* carreras esperadas: el total sale de ofensiva vs pitcheo rival,
-     la diferencia se fuerza al delta de la formula para que todo cuadre */
+  /* Carreras esperadas por el metodo multiplicativo (tipo log5):
+     ofensiva del equipo x carreras que permite el rival / promedio de la liga.
+     Respeta los extremos: contra un as baja de verdad, contra un pitcher malo sube.
+     La diferencia se fuerza despues al delta de la formula para que todo cuadre. */
+  var LRG=(LIGA_RG!=null?LIGA_RG:4.30);
   var permH=(eH*6/9 + bh.era*3/9)*1.08;
   var permA=(eA*6/9 + ba.era*3/9)*1.08;
-  var crudoA=(oa.rg+permH)/2, crudoH=(oh.rg+permA)/2;
+  var crudoA=rgA*permH/LRG, crudoH=rgH*permA/LRG;
+  crudoA=Math.max(1.5,Math.min(9.0,crudoA));
+  crudoH=Math.max(1.5,Math.min(9.0,crudoH));
   var T=crudoA+crudoH;
   var pk=PARK[x.venueId]||null;
   var pfv=pk?pk[1]:1.00;
@@ -647,8 +680,8 @@ function detalle(x){
   var bruto=pfv*fTemp;
   var fSuave=1+(bruto-1)*SUAVE;
   var Tbase=T;
-  T=T*fSuave;
-  var dEf=(r.pct-50)/17;
+  T=T*fSuave+EXTRAS;
+  var dEf=(r.pct-50)/MULT;
   var lamH=(T+dEf)/2, lamA=(T-dEf)/2;
   if(lamA<0.5){lamA=0.5;} if(lamH<0.5){lamH=0.5;}
 
@@ -686,6 +719,7 @@ function detalle(x){
   '<tr><td>OPS vs mano rival</td><td class="n">'+num(x.splitA,3)+'</td><td class="n">'+num(x.splitH,3)+'</td></tr>'+
   '<tr class="usa"><td>Carreras por juego ajustadas</td><td class="n">'+num(rgA)+'</td><td class="n">'+num(rgH)+'</td></tr>'+
   '<tr><td>ERA bullpen'+((ba.aprox||bh.aprox)?' *':'')+'</td><td class="n">'+num(ba.era)+'</td><td class="n">'+num(bh.era)+'</td></tr>'+
+  '<tr><td>Carreras que permite su staff</td><td class="n">'+num(permA,2)+'</td><td class="n">'+num(permH,2)+'</td></tr>'+
   '<tr><td>Carreras esperadas hoy</td><td class="n">'+num(lamA,1)+'</td><td class="n">'+num(lamH,1)+'</td></tr>'+
   '<tr><td>Cuota justa al ganador</td><td class="n">'+american(pA)+'</td><td class="n">'+american(pH)+'</td></tr>'+
   '</table>'+
@@ -717,7 +751,7 @@ function detalle(x){
   contexto(x,pfv,Tbase,T,notaTemp)+
 
   '<h3>Total</h3>'+
-  '<div class="flag">Total esperado: <b>'+num(T,1)+' carreras</b> (crudo '+num(Tbase,1)+', ya ajustado por parque y temperatura).</div>'+
+  '<div class="flag">Total esperado: <b>'+num(T,1)+' carreras</b> (crudo '+num(Tbase,1)+', ajustado por parque, temperatura e innings extra).</div>'+
   '<div class="row" data-tot="'+T.toFixed(3)+'">'+
     '<label>Línea del book</label><input type="number" step="0.5" class="tl" placeholder="8.5">'+
     '<div class="out"></div></div>'+
@@ -759,7 +793,7 @@ function desglose(r,nomA,nomH){
     '<div><span>Bullpens × 0.25</span><b>'+sg(r.p3)+'</b></div>'+
     '<div><span>Localía</span><b>+0.120</b></div>'+
     '<div class="tot"><span>Δ carreras a favor de '+(r.delta>=0?nomH:nomA)+'</span><b>'+Math.abs(r.delta).toFixed(3)+'</b></div>'+
-    '<div><span>50% + (Δ × 17)</span><b>'+(50+r.delta*17).toFixed(1)+'%</b></div>'+
+    '<div><span>50% + (Δ × '+MULT+')</span><b>'+(50+r.delta*MULT).toFixed(1)+'%</b></div>'+
   '</div>';
 }
 
@@ -849,7 +883,7 @@ $('calcular').addEventListener('click',function(){
   if(falta){ $('manual_out').innerHTML='<div class="status err">Faltan valores. Llena las seis casillas.</div>'; return; }
   var r=ventaja(d), pH=r.pct, pA=100-pH;
   var gana=pH>=50?'el local':'la visita';
-  var pctGana=Math.max(pA,pH), vc=Math.abs(pctGana-50)/17;
+  var pctGana=Math.max(pA,pH), vc=Math.abs(pctGana-50)/MULT;
   var pick = vc<0.50
     ? '<div class="pick no"><div class="q">Sin pick</div><div class="r">Ventaja de '+vc.toFixed(2)+' carreras, por debajo de 0.50.</div></div>'
     : '<div class="pick'+(pctGana>=64?' big':'')+'"><div class="q">Juégale a '+gana+'</div><div class="r">'+pctGana.toFixed(1)+'% · cuota justa '+american(pctGana)+' · ventaja de '+vc.toFixed(2)+' carreras.</div></div>';
@@ -868,6 +902,11 @@ $('calcular').addEventListener('click',function(){
   conectar($('manual_out'));
 });
 
+$('mult').addEventListener('change',function(){
+  MULT=+this.value;
+  var gs=document.querySelectorAll('.game');
+  for(var i=0;i<gs.length;i++){ if(gs[i]._d) pintar(gs[i]); }
+});
 $('modo').addEventListener('change',function(){
   MODO=this.value;
   var gs=document.querySelectorAll('.game');
