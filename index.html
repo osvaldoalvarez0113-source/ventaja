@@ -952,6 +952,14 @@ function salidasBloque(nombre,l5,hist,se){
   var ipx  = n ? ip/n : null;
   var kx   = n ? ks/n : null;
   var gx   = ngs ? gs/ngs : null;
+  /* Si las 5 salidas cubren mucho mas de lo normal (5-6 dias entre aperturas),
+     hubo lesion o bajada a menores: no es forma reciente aunque lo parezca. */
+  var span=null;
+  var fs=l5.starts.map(function(s){ return s.f; }).filter(Boolean).sort();
+  if(fs.length>1){
+    var d1=new Date(fs[0]+'T12:00:00Z'), d2=new Date(fs[fs.length-1]+'T12:00:00Z');
+    if(isFinite(d1)&&isFinite(d2)) span=Math.round((d2-d1)/86400000);
+  }
   var o='<div class="flag"><b>'+esc(nombre)+'</b> — '+w+'-'+l+' en sus últimas '+n+
         (n===1?' salida':' salidas')+', con '+num(eraS)+' de ERA'+
         (se&&se.w!=null?' · '+se.w+'-'+se.l+' en la temporada':'')+'.</div>'+
@@ -961,7 +969,7 @@ function salidasBloque(nombre,l5,hist,se){
     '<b>Apoyo</b> carreras que le anotó su propio equipo ese día (— = juego de hoy o fuera del historial).</div>'+
     '<table class="log"><tr><th>Salida</th><th>IP</th><th>GSc</th><th>Apoyo</th></tr>'+
     filas+
-    '<tr class="usa"><td>Promedio</td><td class="n">'+ipMlb(ipx)+'</td>'+
+    '<tr class="usa"><td>Promedio</td><td class="n">'+num(ipx,1)+'</td>'+
     '<td class="n">'+(gx!=null?Math.round(gx):'—')+'</td>'+
     '<td class="n">'+(apx!=null?num(apx,1):'—')+'</td></tr>'+
     '</table>'+
@@ -970,11 +978,16 @@ function salidasBloque(nombre,l5,hist,se){
     det+'</table>'+
     '<div class="flag" style="font-size:12px"><b>H</b> hits · <b>BB</b> boletos · <b>K</b> ponches · '+
     '<b>LP</b> carreras limpias · <b>Dec</b> G ganó, P perdió, ND sin decisión.</div></details>'+
-    (ipx!=null?'<div class="flag">En una salida típica aguanta <b>'+ipMlb(ipx)+' innings</b> y poncha a <b>'+
+    (ipx!=null?'<div class="flag">En una salida típica aguanta <b>'+num(ipx,1)+' innings</b> y poncha a <b>'+
       num(kx,1)+'</b>'+(gx!=null?', con Game Score de <b>'+Math.round(gx)+'</b> ('+gscTxt(Math.round(gx))+')':'')+
       '. Lo que falte de los 9 innings lo tira el bullpen.'+
       (ipx<5?' Menos de 5 innings por salida es apertura corta — el bullpen decide este juego más que él.':'')+
       '</div>':'')+
+    (span!=null&&span>45?'<div class="flag">⚠️ Estas 5 salidas cubren <b>'+span+' días</b>. '+
+      'Un abridor sano tira cada 5 o 6 días, así que ahí hubo lesión o tiempo en las menores. '+
+      'Esto no es forma reciente: la salida más vieja de la tabla ya no dice nada de cómo está hoy, '+
+      'y el ERA de últimas 5 que usa el modelo viene contaminado con ella. '+
+      'Si vas a apostar este juego, busca por qué estuvo parado.</div>':'')+
     (!hayG?'<div class="flag" style="font-size:12px">Sin hits ni boletos en el log de este pitcher, así que no se pudo calcular el Game Score. Mira el detalle.</div>':'');
   if(eraS!=null&&apx!=null){
     var LR=(LIGA_RG!=null?LIGA_RG:4.30);
