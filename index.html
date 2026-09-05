@@ -1288,12 +1288,12 @@ function cargar(){
 
 function fila(g,year){
   var a=g.teams.away, h=g.teams.home;
-  var pa=a.probablePitcher, ph=h.probablePitcher;
+  var pa=a.probablePitcher, pih=h.probablePitcher;
   var hora=new Date(g.gameDate).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
   var el=document.createElement('div');
   el.className='game';
   el.innerHTML='<div class="head"><div class="match">'+esc(a.team.name)+' @ '+esc(h.team.name)+
-    '<small>'+esc(pa?pa.fullName:'Abridor por confirmar')+' vs '+esc(ph?ph.fullName:'Abridor por confirmar')+'</small>'+
+    '<small>'+esc(pa?pa.fullName:'Abridor por confirmar')+' vs '+esc(pih?pih.fullName:'Abridor por confirmar')+'</small>'+
     '</div><div class="clock">'+hora+'</div></div>'+
     '<div class="body"><div class="status">Cargando números…</div></div>';
   var head=el.querySelector('.head'), body=el.querySelector('.body');
@@ -1302,7 +1302,7 @@ function fila(g,year){
     el.classList.toggle('open');
     if(cargado||!el.classList.contains('open')) return;
     cargado=true;
-    if(!pa||!ph){ body.innerHTML='<div class="status err">Todavía no hay abridores confirmados. Vuelve más tarde o métele los números a mano abajo.</div>'; return; }
+    if(!pa||!pih){ body.innerHTML='<div class="status err">Todavía no hay abridores confirmados. Vuelve más tarde o métele los números a mano abajo.</div>'; return; }
     var v=g.venue||{};
     var loc=v.location&&v.location.defaultCoordinates;
     var pkinfo=PARK[v.id]||null;
@@ -1310,9 +1310,9 @@ function fila(g,year){
     var cerrado=(techo==='techo')||/dome|indoor/i.test(techo);
     var pw=(loc&&!cerrado)?clima(loc.latitude,loc.longitude,new Date(g.gameDate).getTime()):Promise.resolve(null);
     var fecha=diaBase(g.officialDate||g.gameDate.slice(0,10));
-    Promise.all([ultimas5(pa.id,year),ultimas5(ph.id,year),temporada(pa.id,year),temporada(ph.id,year),
+    Promise.all([ultimas5(pa.id,year),ultimas5(pih.id,year),temporada(pa.id,year),temporada(pih.id,year),
       ofensiva(a.team.id,year),ofensiva(h.team.id,year),bullpen(a.team.id,year),bullpen(h.team.id,year),
-      kLiga(year),ligaEra(year),pw,mano(pa.id),mano(ph.id),
+      kLiga(year),ligaEra(year),pw,mano(pa.id),mano(pih.id),
       quemados(a.team.id,fecha),quemados(h.team.id,fecha),
       standings(year),historial(a.team.id,fecha),historial(h.team.id,fecha),
       ofensiva14(a.team.id,fecha,year),ofensiva14(h.team.id,fecha,year)])
@@ -1320,7 +1320,7 @@ function fila(g,year){
       var mA=r[11], mH=r[12];
       return Promise.all([splitEquipo(a.team.id,mH,year), splitEquipo(h.team.id,mA,year)])
         .then(function(sp){
-          el._d={a:a,h:h,pa:pa,ph:ph,l5a:r[0],l5h:r[1],sea:r[2],seh:r[3],oa:r[4],oh:r[5],ba:r[6],bh:r[7],
+          el._d={a:a,h:h,pa:pa,ph:pih,l5a:r[0],l5h:r[1],sea:r[2],seh:r[3],oa:r[4],oh:r[5],ba:r[6],bh:r[7],
                  cl:r[10], venue:(v.name||(pkinfo?pkinfo[0]:'')), venueId:v.id,
                  techo:techo, cerrado:cerrado,
                  manoA:mA, manoH:mH, splitA:sp[0], splitH:sp[1],
@@ -1353,7 +1353,10 @@ function pintar(el){
 }
 
 function detalle(x){
-  var a=x.a,h=x.h,pa=x.pa,ph=x.ph,l5a=x.l5a,l5h=x.l5h,sea=x.sea,seh=x.seh,oa=x.oa,oh=x.oh,ba=x.ba,bh=x.bh;
+  /* OJO: la variable del abridor local se llama pih y NO ph. La funcion global
+     ph(book,kalshi) se usa aqui abajo para los placeholders de cuota; si esta
+     variable se llamara ph la taparia y todo el bloque reventaria. */
+  var a=x.a,h=x.h,pa=x.pa,pih=x.ph,l5a=x.l5a,l5h=x.l5h,sea=x.sea,seh=x.seh,oa=x.oa,oh=x.oh,ba=x.ba,bh=x.bh;
   var eA=eraUsado(sea,l5a), eH=eraUsado(seh,l5h);
   var cA=eraCrudo(sea,l5a), cH=eraCrudo(seh,l5h);
   var rgSeasonA=rgUsado(oa,x.o14a), rgSeasonH=rgUsado(oh,x.o14h);
@@ -1475,12 +1478,12 @@ function detalle(x){
   '<tr><td>Carreras esperadas hoy</td><td class="n">'+num(lamA,1)+'</td><td class="n">'+num(lamH,1)+'</td></tr>'+
   '<tr><td>Cuota justa al ganador</td><td class="n">'+american(pA)+'</td><td class="n">'+american(pH)+'</td></tr>'+
   '</table>'+
-  suerte(pa.fullName,sea)+suerte(ph.fullName,seh)+ajuste(pa.fullName,cA,eA)+ajuste(ph.fullName,cH,eH)+
+  suerte(pa.fullName,sea)+suerte(pih.fullName,seh)+ajuste(pa.fullName,cA,eA)+ajuste(pih.fullName,cH,eH)+
 
   '<h3>Forma y récord</h3>'+
   formaTabla(x,nomA,nomH)+
   salidasBloque(pa.fullName,l5a,x.hia,sea)+
-  salidasBloque(ph.fullName,l5h,x.hih,seh)+
+  salidasBloque(pih.fullName,l5h,x.hih,seh)+
   '<div class="flag">Nada de este bloque entra al cálculo, y es a propósito. El récord de un pitcher mide lo que anotó su ofensiva y lo que aguantó su bullpen, no cómo tiró él: la columna <b>Apoyo</b> son las carreras que le anotó su equipo en cada salida. Léelo como contexto, no como señal. <b>LP</b> = carreras limpias permitidas. <b>Dec</b>: G ganó, P perdió, ND sin decisión.</div>'+
 
   '<h3>Manos y bullpen</h3>'+
@@ -1528,7 +1531,7 @@ function detalle(x){
 
   '<h3>Ponches del abridor</h3>'+
   kBloque(pa.fullName,sea,oh,nomH,l5a)+
-  kBloque(ph.fullName,seh,oa,nomA,l5h)+
+  kBloque(pih.fullName,seh,oa,nomA,l5h)+
 
   '<h3>Cómo salió el número</h3>'+
   desglose(r,nomA,nomH)+
