@@ -81,6 +81,23 @@ table.log td.n{font-size:16px}
 .grid span{font-size:13px;color:var(--muted)}
 .grid input{width:100%}
 .grid .h{font-family:var(--cond);font-size:17px;color:var(--chalk);text-align:center}
+.registro{margin-top:26px;border-top:1px solid var(--line);padding-top:16px}
+.registro h2{font-family:var(--cond);font-size:26px;margin:0 0 4px;font-weight:600}
+.pk{border-top:1px solid var(--line);padding:10px 0}
+.pk .t{font-family:var(--cond);font-size:19px;line-height:1.15}
+.pk .s{font-size:12px;color:var(--muted);margin-top:2px}
+.pk .acc{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.pk .acc input{width:76px}
+.pk button{padding:6px 11px;font-size:15px}
+.pk .res{font-family:var(--cond);font-size:17px}
+.pk .res.g{color:var(--good)}
+.pk .res.p{color:var(--bad)}
+.tarj{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.tarj div{background:var(--panel);border-radius:6px;padding:10px 12px;flex:1 1 30%;min-width:96px}
+.tarj b{display:block;font-family:var(--cond);font-size:26px;font-weight:600;line-height:1.1}
+.tarj span{font-size:11px;color:var(--muted)}
+.tarj .g b{color:var(--good)}
+.tarj .p b{color:var(--bad)}
 footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
 @media (prefers-reduced-motion:reduce){.bar span{transition:none}}
 </style>
@@ -146,6 +163,20 @@ footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
   <div id="manual_out"></div>
 </div>
 
+<div class="registro">
+  <h2>Mis picks</h2>
+  <p class="flag">Guarda el pick cuando lo tomes. Después vuelve, mete la cuota de cierre y el
+  resultado. El CLV te dice si tu número le gana al mercado, que es lo único que te dice la verdad
+  rápido: puedes perder tres semanas seguidas con CLV positivo y aun así estar haciéndolo bien.</p>
+  <div id="reg_resumen"></div>
+  <div id="reg_lista"></div>
+  <div class="controls" style="margin-top:14px">
+    <button class="ghost" id="reg_backup">Copiar respaldo</button>
+    <button class="ghost" id="reg_import">Pegar respaldo</button>
+  </div>
+  <div id="reg_msg" class="flag"></div>
+</div>
+
 <footer>
   Datos: MLB Stats API. El ganador sale de tu fórmula de ventaja. El hándicap, el total y los ponches
   salen de una distribución de Poisson montada sobre esas mismas carreras esperadas, así que los cuatro
@@ -168,6 +199,27 @@ footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
   se recalcula por valor contra la línea en vez de por probabilidad sola: un 64% pagado a −200 es una
   mala apuesta y un 55% a +120 es buena. El EV y el ¼ de Kelly se calculan siempre contra la cuota real
   que te pagan, no contra la ajustada; la fila sin vig sirve para ver de cuánto te separas del mercado.
+  El hándicap y el ganador salen de dos cálculos distintos (Poisson y tu fórmula); la tabla del
+  hándicap muestra los dos y avisa si se separan más de 4 puntos, porque ahí uno de los dos está mal.
+  Los campos de cuota son de texto y no numéricos a propósito: el teclado numérico del iPhone no
+  trae el signo menos, y sin él no se puede escribir −155. Se aceptan también el guion largo y el
+  menos tipográfico que mete el corrector. Los boxscores se piden recortados con ?fields= para no
+  bajar cientos de KB por juego; si el filtro viniera vacío se recae al boxscore completo.
+  Los picks se guardan solo en este teléfono, sin cuenta ni servidor; si borras los datos del
+  navegador se van, por eso está el botón de respaldo. El CLV compara el implícito de la cuota que
+  tomaste contra el implícito de la cuota de cierre del mismo lado: si cerró más corta que la tuya,
+  le ganaste al mercado. Lleva la comisión de la casa en los dos números, así que se cancela casi
+  toda al restar. La calibración agrupa tus picks por el porcentaje que les diste y compara lo que
+  dijiste contra lo que pasó: si llamas 60% y ganas 45%, tu modelo viene inflado.
+  El <b>Ranking del juego</b> ordena por EV todas las proposiciones en las que metiste cuota
+  (ganador, hándicap, total y ponches de cada abridor): es el orden matemático puro, cuál paga
+  más de lo que debería. Solo entran las que llegan a 2 puntos de ventaja. En líneas enteras
+  (total 8.0, ponches 5.0) el empate devuelve el dinero y se cuenta como tal, no como derrota.
+  Los mercados de un mismo juego están correlacionados, así que jugar dos del ranking no diversifica.
+  El tope del porcentaje es 22–78%, el rango real de un moneyline de MLB; si un juego lo toca,
+  el moneyline sale del ranking porque comparar un número recortado contra la cuota inventa ventaja.
+  Los ERA regresan hacia el FIP del propio pitcher cuando lo tiene, no hacia el promedio de la liga:
+  anclar a la liga aplastaba a los ases contra la media y empujaba todos los juegos hacia el 50%.
   La proyección de ponches usa innings y K de aperturas solamente: si el abridor ha tirado en relevo,
   dividir sus innings totales entre sus aperturas infla el número. Los ERA se ajustan por tamaño de muestra: un pitcher con pocos innings se jala hacia el promedio de la liga, para que una sola salida mala no rompa el cálculo.
   La ofensiva de los últimos 14 días entra al cálculo mezclada 70/30 con la de temporada, igual que el ERA;
@@ -189,6 +241,7 @@ var K_LIGA=null;
 var LIGA_ERA=null;
 var LIGA_RG=null;
 var STAND=null;
+var LIGA_YEAR=null;   /* los promedios de liga son de un ano concreto */
 var MULT=13;
 var EXTRAS=0.18;  /* carreras que aportan los innings extra */
 /* Park factors por venue_id — misma tabla que contexto_juego.py de Betbot.
@@ -249,8 +302,11 @@ function ventaja(d){
   var p1=(d.eraA-d.eraH)*0.65, p2=(d.rgH-d.rgA)*0.5, p3=(d.bpA-d.bpH)*0.25;
   var delta=p1+p2+p3+0.12;
   var pct=50+delta*MULT;
-  var capped=pct>68||pct<32;
-  pct=Math.max(32,Math.min(68,pct));
+  /* Tope amplio: 78/22 cubre el rango real de un moneyline de MLB (hasta -350).
+     El de 68 anterior recortaba favoritos legitimos y, al comparar contra la cuota,
+     eso fabricaba "valor" en el underdog que no existia. */
+  var capped=pct>78||pct<22;
+  pct=Math.max(22,Math.min(78,pct));
   return {p1:p1,p2:p2,p3:p3,delta:delta,pct:pct,capped:capped};
 }
 function american(p){
@@ -260,19 +316,23 @@ function american(p){
 }
 function banca(){ var v=parseFloat(($('banca')||{}).value); return isFinite(v)&&v>0?v:null; }
 function decimal(am){ return am>0 ? am/100 : 100/(-am); }
-function valor(pPct,amStr){
-  var am=parseFloat(amStr);
+/* pushPct: probabilidad de empate en la linea (solo en lineas enteras: total 8.0,
+   ponches 5.0). El empate devuelve el dinero, no lo pierde — tratarlo como derrota
+   subestima el valor del Under. */
+function valor(pPct,amStr,pushPct){
+  var am=numOdds(amStr);
   if(!isFinite(am)||am===0) return null;
   var imp=implied(am); if(imp==null) return null;
-  var p=pPct/100, b=decimal(am);
-  var ventaja=p-imp/100;
-  var f=(p*(b+1)-1)/b;              /* Kelly completo */
+  var p=pPct/100, b=decimal(am), push=(pushPct||0)/100;
+  var q=Math.max(0,1-p-push);        /* pierde de verdad */
+  var ev=p*b-q;                      /* por cada dolar apostado */
+  var f=b>0?(p*b-q)/b:0;             /* Kelly completo, con push */
   var bk=banca();
-  return {imp:imp, ventaja:ventaja*100, kelly:f,
+  return {imp:imp, ventaja:(p-imp/100)*100, ev:ev, kelly:f, push:push*100,
           stake: (bk&&f>0)? bk*f*0.25 : null};   /* cuarto de Kelly, como Betbot */
 }
-function txtValor(etiqueta,pPct,amStr){
-  var v=valor(pPct,amStr);
+function txtValor(etiqueta,pPct,amStr,pushPct){
+  var v=valor(pPct,amStr,pushPct);
   if(!v) return null;
   if(v.ventaja<=0) return {ok:false, t:etiqueta+': sin valor — tú '+pPct.toFixed(1)+'%, el book paga '+v.imp.toFixed(1)+'%'};
   var t=etiqueta+': valor +'+v.ventaja.toFixed(1)+' pts — tú '+pPct.toFixed(1)+'%, el book paga '+v.imp.toFixed(1)+'%';
@@ -289,15 +349,37 @@ function devig(amA,amH){
   return {impA:ia, impH:ih, sum:s, fairA:ia/s*100, fairH:ih/s*100, vig:s-100};
 }
 /* EV por cada dolar apostado, contra la cuota REAL que te pagan (con vig). */
-function evUnit(p,am){ var b=decimal(am); return p*b-(1-p); }
+function evUnit(p,am){ var b=decimal(am); return p*b-(1-p); }   /* sin push: moneyline */
+/* El iPhone mete guion largo o menos tipografico segun el teclado, y parseFloat
+   devuelve NaN con esos. Se normalizan antes de leer cualquier cuota. */
+function numOdds(v){
+  if(v==null) return NaN;
+  return parseFloat(String(v)
+    .replace(/[\u2212\u2012\u2013\u2014\u2015\u2010\u2011]/g,'-')
+    .replace(/[\uFF0B]/g,'+')
+    .replace(/[\s,]/g,''));
+}
 function implied(v){
-  var n=parseFloat(v);
+  var n=numOdds(v);
   if(!isFinite(n)||n===0) return null;
   return n<0 ? (-n)/((-n)+100)*100 : 100/(n+100)*100;
 }
 
 /* ---------- datos ---------- */
 function j(url){ return fetch(url).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }); }
+/* Un boxscore completo pesa cientos de KB y de ahi solo se usan cinco campos.
+   Con ?fields= la MLB devuelve solo lo pedido; si el filtro no trae nada util,
+   se recae al boxscore entero para no romper nada. */
+var BOX_FIELDS='teams,home,away,team,id,players,person,fullName,stats,pitching,'+
+               'inningsPitched,earnedRuns,gamesStarted,battingOrder';
+function boxscore(pk){
+  return j(API+'/game/'+pk+'/boxscore?fields='+BOX_FIELDS).then(function(b){
+    if(b&&b.teams&&b.teams.home&&b.teams.away) return b;
+    throw new Error('filtro vacio');
+  }).catch(function(){
+    return j(API+'/game/'+pk+'/boxscore');
+  });
+}
 function ipToNum(ip){
   if(ip==null) return 0;
   var n=parseFloat(String(ip));
@@ -348,6 +430,8 @@ function temporada(id,year){
       k9:  ip>0 ? so*9/ip : null,
       ipx: gs>0 ? ip/gs : null};
     cache.sea[k]=out; return out;
+  }).catch(function(){
+    return {era:null,ip:0,so:0,gs:0,w:null,l:null,fip:null,k9:null,ipx:null};
   });
 }
 function ofensiva(teamId,year){
@@ -361,7 +445,7 @@ function ofensiva(teamId,year){
     var out={rg: g>0?r/g:null, g:g, kpct: pa>0?so/pa:null,
              ops: st.ops!=null?parseFloat(st.ops):null};
     cache.hit[k]=out; return out;
-  });
+  }).catch(function(){ return {rg:null,g:0,kpct:null,ops:null}; });
 }
 /* Ofensiva de los ultimos 14 dias. Captura al equipo caliente o al apagado,
    cosa que el promedio de temporada tarda meses en reflejar. */
@@ -450,12 +534,12 @@ function diaBase(oficial){
   var pt=String(oficial).split('-');
   return new Date(Date.UTC(+pt[0], +pt[1]-1, +pt[2], 12, 0, 0));
 }
-/* Historial de 32 dias: sirve para los ultimos 5 juegos, la racha, y para
+/* Historial de 40 dias: sirve para los ultimos 5 juegos, la racha, y para
    saber cuantas carreras le anoto el equipo al abridor en cada salida suya. */
 function historial(teamId,baseDate){
   var k=teamId+'-'+ymd(baseDate);
   if(cache.hist[k]) return Promise.resolve(cache.hist[k]);
-  var ini=ymd(new Date(baseDate.getTime()-32*86400000));
+  var ini=ymd(new Date(baseDate.getTime()-40*86400000));
   var fin=ymd(new Date(baseDate.getTime()-86400000));
   return j(API+'/schedule?sportId=1&teamId='+teamId+'&startDate='+ini+'&endDate='+fin+'&gameType=R')
    .then(function(sc){
@@ -490,7 +574,7 @@ function quemados(teamId,baseDate){
         var gs=(sc.dates&&sc.dates[0]&&sc.dates[0].games)||[];
         if(!gs.length) return {nombres:[],er:0,ip:0};
         return Promise.all(gs.slice(0,2).map(function(g){
-          return j(API+'/game/'+g.gamePk+'/boxscore').then(function(b){
+          return boxscore(g.gamePk).then(function(b){
             var out={nombres:[],er:0,ip:0};
             ['home','away'].forEach(function(l){
               var eq=b.teams&&b.teams[l];
@@ -539,7 +623,7 @@ function lesionados(teamId){
   }).catch(function(){ return []; });
 }
 function lineup(gamePk){
-  return j(API+'/game/'+gamePk+'/boxscore').then(function(b){
+  return boxscore(gamePk).then(function(b){
     var o={};
     ['home','away'].forEach(function(l){
       var eq=b.teams&&b.teams[l];
@@ -568,7 +652,7 @@ function regulares(teamId,baseDate){
      gs=gs.slice(-5);
      if(gs.length<3){ cache.reg[k]=null; return null; }
      return Promise.all(gs.map(function(pk){
-       return j(API+'/game/'+pk+'/boxscore').then(function(b){
+       return boxscore(pk).then(function(b){
          var o=[];
          ['home','away'].forEach(function(l){
            var eq=b.teams&&b.teams[l];
@@ -625,13 +709,24 @@ function esc(s){ return String(s==null?'':s).replace(/[<>&]/g,function(c){return
 function num(v,d){ d=(d==null?2:d); return (v==null||!isFinite(v))?'—':v.toFixed(d); }
 function pc(v){ return (v*100).toFixed(1)+'%'; }
 
-function reg(era,ip,prior){
+/* Regresion a la media. El ancla por defecto es el promedio de la liga, pero si el
+   pitcher tiene FIP propio se usa ESE: es una estimacion de su talento real y no
+   aplasta a los ases contra la media. Prior de 40 IP en vez de 60 por lo mismo —
+   con 60 un abridor de media temporada quedaba jalado casi hasta el promedio. */
+function reg(era,ip,prior,ancla){
   if(era==null||!isFinite(era)) return null;
-  var L=(LIGA_ERA!=null?LIGA_ERA:4.10);
+  var L=(ancla!=null&&isFinite(ancla))?ancla:(LIGA_ERA!=null?LIGA_ERA:4.10);
   return (era*ip + L*prior)/(ip+prior);
 }
 function eraUsado(se,l5){
-  var s=reg(se.era,se.ip,60), l=reg(l5.era,l5.ip,30), f=reg(se.fip,se.ip,60);
+  /* El ancla es el FIP del pitcher, pero un FIP de 15 innings es tan ruidoso como
+     el ERA: primero se regresa el propio FIP hacia la liga, y ESE es el ancla. */
+  var anc=null;
+  if(se.fip!=null&&isFinite(se.fip)&&se.ip>0){
+    var L=(LIGA_ERA!=null?LIGA_ERA:4.10);
+    anc=(se.fip*se.ip + L*30)/(se.ip+30);
+  }
+  var s=reg(se.era,se.ip,40,anc), l=reg(l5.era,l5.ip,25,anc), f=reg(se.fip,se.ip,40);
   if(MODO==='season') return s;
   if(MODO==='last5')  return l;
   if(MODO==='fip')    return f!=null?f:s;
@@ -774,14 +869,263 @@ function salidasBloque(nombre,l5,hist,se){
   return o;
 }
 
+/* ---------- registro de picks (queda en el telefono) ---------- */
+var REG_KEY='ventaja_picks_v1';
+function regLeer(){
+  try{ var t=localStorage.getItem(REG_KEY); return t?JSON.parse(t):[]; }
+  catch(e){ return []; }
+}
+function regEscribir(a){
+  try{ localStorage.setItem(REG_KEY,JSON.stringify(a)); return true; }
+  catch(e){ return false; }
+}
+function claveP(o){ return [o.f,o.juego,o.m,String(o.am)].join('|'); }
+function regExiste(o){
+  var k=claveP(o), a=regLeer();
+  for(var i=0;i<a.length;i++) if(claveP(a[i])===k) return true;
+  return false;
+}
+function regAdd(o){
+  if(regExiste(o)) return null;      /* mismo juego, mismo mercado, misma cuota */
+  var a=regLeer();
+  o.id='p'+Date.now()+Math.floor(Math.random()*1000);
+  a.push(o);
+  return regEscribir(a)?o.id:null;
+}
+function regUpd(id,campos){
+  var a=regLeer();
+  for(var i=0;i<a.length;i++) if(a[i].id===id){ for(var k in campos) a[i][k]=campos[k]; }
+  regEscribir(a);
+}
+function regDel(id){
+  regEscribir(regLeer().filter(function(p){ return p.id!==id; }));
+}
+/* CLV: si la cuota cerro mas corta que la que tomaste, le ganaste al mercado.
+   Los dos numeros llevan la comision adentro, asi que casi toda se cancela al restar. */
+function clvPts(p){
+  if(p.cierre==null||p.cierre==='') return null;
+  var a=implied(p.am), b=implied(p.cierre);
+  if(a==null||b==null) return null;
+  return b-a;
+}
+function unidades(p){
+  if(p.res==='E') return 0;
+  if(p.res==='G') return decimal(numOdds(p.am));
+  if(p.res==='P') return -1;
+  return null;
+}
+function resumenReg(a){
+  var cerrados=a.filter(function(p){ return p.res; });
+  var conClv=a.filter(function(p){ return clvPts(p)!=null; });
+  var clvSum=0, clvGana=0;
+  conClv.forEach(function(p){ var c=clvPts(p); clvSum+=c; if(c>0) clvGana++; });
+  var u=0, n=0;
+  cerrados.forEach(function(p){ var v=unidades(p); if(v!=null){ u+=v; n++; } });
+  return {n:a.length, cerrados:cerrados.length, abiertos:a.length-cerrados.length,
+          clvN:conClv.length, clvProm: conClv.length?clvSum/conClv.length:null,
+          clvGanaPct: conClv.length?clvGana/conClv.length*100:null,
+          u:u, roi: n?u/n*100:null, jugados:n};
+}
+function calibracion(a){
+  var tramos=[[0,50,'menos de 50%'],[50,55,'50 a 55%'],[55,60,'55 a 60%'],
+              [60,65,'60 a 65%'],[65,101,'65% o más']];
+  return tramos.map(function(t){
+    var g=a.filter(function(p){ return (p.res==='G'||p.res==='P') && p.p>=t[0] && p.p<t[1]; });
+    if(!g.length) return null;
+    var w=g.filter(function(p){ return p.res==='G'; }).length;
+    var dicho=0; g.forEach(function(p){ dicho+=p.p; });
+    return {t:t[2], n:g.length, dicho:dicho/g.length, real:w/g.length*100};
+  }).filter(Boolean);
+}
+function pintarRegistro(){
+  var a=regLeer();
+  var res=$('reg_resumen'), lis=$('reg_lista');
+  if(!res||!lis) return;
+  if(!a.length){
+    res.innerHTML='';
+    lis.innerHTML='<div class="flag">Todavía no has guardado ningún pick. Cuando el ranking te saque uno, dale a Guardar.</div>';
+    return;
+  }
+  var R=resumenReg(a);
+  var o='<div class="tarj">';
+  o+='<div class="'+(R.clvProm==null?'':(R.clvProm>0?'g':'p'))+'"><b>'+
+      (R.clvProm==null?'—':(R.clvProm>0?'+':'')+R.clvProm.toFixed(1))+'</b><span>CLV promedio en puntos ('+R.clvN+' con cierre)</span></div>';
+  o+='<div><b>'+(R.clvGanaPct==null?'—':R.clvGanaPct.toFixed(0)+'%')+'</b><span>picks que le ganaron al cierre</span></div>';
+  o+='<div class="'+(R.roi==null?'':(R.roi>0?'g':'p'))+'"><b>'+
+      (R.roi==null?'—':(R.roi>0?'+':'')+R.roi.toFixed(1)+'%')+'</b><span>ROI en '+R.jugados+' resueltos</span></div>';
+  o+='</div>';
+  if(R.clvN>0&&R.clvN<25)
+    o+='<div class="flag">Con '+R.clvN+' picks el CLV todavía no dice nada firme. A partir de 30 o 40 empieza a tener lectura.</div>';
+  else if(R.clvProm!=null&&R.clvProm>0)
+    o+='<div class="flag">CLV positivo: tu número le está ganando al mercado. Eso vale más que el resultado de la semana — sigue aunque estés perdiendo.</div>';
+  else if(R.clvProm!=null&&R.clvProm<=0)
+    o+='<div class="flag">CLV negativo o en cero: el mercado te está ganando. Si esto se sostiene sobre 40 picks, el método no está sirviendo, por bien que te haya ido en resultados.</div>';
+  var cal=calibracion(a);
+  if(cal.length){
+    o+='<table><tr><th>Cuando dices…</th><th>Dijiste</th><th>Pasó</th><th>n</th></tr>';
+    cal.forEach(function(c){
+      o+='<tr><td>'+esc(c.t)+'</td><td class="n">'+c.dicho.toFixed(1)+'%</td><td class="n">'+
+         c.real.toFixed(0)+'%</td><td class="n">'+c.n+'</td></tr>';
+    });
+    o+='</table><div class="flag">Si lo que dices queda muy por encima de lo que pasa, tu modelo viene inflado y hay que bajarle el multiplicador.</div>';
+  }
+  res.innerHTML=o;
+
+  var abiertos=a.filter(function(p){ return !p.res; }).reverse();
+  var cerrados=a.filter(function(p){ return p.res; }).reverse().slice(0,12);
+  var h='';
+  if(abiertos.length){
+    h+='<h3>Pendientes</h3>';
+    abiertos.forEach(function(p){
+      var c=clvPts(p);
+      h+='<div class="pk" data-id="'+p.id+'">'+
+         '<div class="t">'+esc(p.m)+' '+esc(String(p.am))+'</div>'+
+         '<div class="s">'+esc(p.juego)+' · '+esc(p.f)+' · tu número '+p.p.toFixed(1)+'%'+
+         (c!=null?' · CLV '+(c>0?'+':'')+c.toFixed(1)+' pts':'')+'</div>'+
+         '<div class="acc">'+
+           '<label>Cierre</label><input type="text" class="cie" value="'+(p.cierre==null?'':esc(String(p.cierre)))+'" placeholder="-175">'+
+           '<button class="rG">Ganó</button>'+
+           '<button class="ghost rP">Perdió</button>'+
+           '<button class="ghost rE">Empate</button>'+
+           '<button class="ghost rX">Borrar</button>'+
+         '</div></div>';
+    });
+  }
+  if(cerrados.length){
+    h+='<h3>Resueltos</h3>';
+    cerrados.forEach(function(p){
+      var c=clvPts(p), u=unidades(p);
+      h+='<div class="pk" data-id="'+p.id+'">'+
+         '<div class="t">'+esc(p.m)+' '+esc(String(p.am))+
+           ' <span class="res '+(p.res==='G'?'g':p.res==='P'?'p':'')+'">'+
+           (p.res==='G'?'ganó':p.res==='P'?'perdió':'empate')+'</span></div>'+
+         '<div class="s">'+esc(p.juego)+' · '+esc(p.f)+' · dijiste '+p.p.toFixed(1)+'%'+
+         (c!=null?' · CLV '+(c>0?'+':'')+c.toFixed(1)+' pts':' · sin cierre')+
+         (u!=null?' · '+(u>0?'+':'')+u.toFixed(2)+' unidades':'')+'</div>'+
+         '<div class="acc"><button class="ghost rU">Reabrir</button><button class="ghost rX">Borrar</button></div>'+
+         '</div>';
+    });
+  }
+  lis.innerHTML=h;
+  lis.querySelectorAll('.pk').forEach(function(d){
+    var id=d.dataset.id;
+    var cie=d.querySelector('.cie');
+    if(cie) cie.addEventListener('input',function(){ regUpd(id,{cierre:cie.value||null}); });
+    var b=function(sel,fn){ var e=d.querySelector(sel); if(e) e.addEventListener('click',fn); };
+    b('.rG',function(){ if(cie) regUpd(id,{cierre:cie.value||null}); regUpd(id,{res:'G'}); pintarRegistro(); });
+    b('.rP',function(){ if(cie) regUpd(id,{cierre:cie.value||null}); regUpd(id,{res:'P'}); pintarRegistro(); });
+    b('.rE',function(){ if(cie) regUpd(id,{cierre:cie.value||null}); regUpd(id,{res:'E'}); pintarRegistro(); });
+    b('.rU',function(){ regUpd(id,{res:null}); pintarRegistro(); });
+    b('.rX',function(){ regDel(id); pintarRegistro(); });
+  });
+}
+
+/* Junta TODOS los mercados del juego en los que ya metiste cuota:
+   moneyline, handicap, total y ponches de cada abridor. */
+function recolectar(root){
+  var out=[];
+  var meter=function(m,p,push,am){
+    if(am==null||String(am).trim()==='') return;
+    if(!isFinite(p)) return;
+    out.push({m:m, p:p, push:push||0, am:am});
+  };
+  root.querySelectorAll('.cmp').forEach(function(b){
+    if(b.dataset.cap==='1') return;   /* porcentaje recortado: no es comparable */
+    meter((b.dataset.na||'Visita')+' gana', +b.dataset.pa, 0, b.querySelector('.ca').value);
+    meter((b.dataset.nh||'Local')+' gana',  +b.dataset.ph, 0, b.querySelector('.ch').value);
+  });
+  root.querySelectorAll('.row[data-hc]').forEach(function(b){
+    meter(b.dataset.nf+' −1.5', +b.dataset.pf, 0, b.querySelector('.hf').value);
+    meter(b.dataset.nd+' +1.5', +b.dataset.pd, 0, b.querySelector('.hd').value);
+  });
+  root.querySelectorAll('.row[data-tot]').forEach(function(b){
+    var L=parseFloat(b.querySelector('.tl').value);
+    if(!isFinite(L)) return;
+    var p=pOver(L,+b.dataset.tot);
+    meter('Over '+L+' carreras',  p.over*100,  p.push*100, b.querySelector('.to').value);
+    meter('Under '+L+' carreras', p.under*100, p.push*100, b.querySelector('.tu').value);
+  });
+  root.querySelectorAll('.row[data-k]').forEach(function(b){
+    var L=parseFloat(b.querySelector('.kl').value);
+    if(!isFinite(L)) return;
+    var p=pOver(L,+b.dataset.k);
+    var q=b.dataset.n||'abridor';
+    meter(q+' Over '+L+' K',  p.over*100,  p.push*100, b.querySelector('.ko').value);
+    meter(q+' Under '+L+' K', p.under*100, p.push*100, b.querySelector('.ku').value);
+  });
+  return out;
+}
+function nivel(edge,ev){
+  if(ev<=0)   return {n:0, t:'sin valor',      c:'no'};
+  if(edge<2)  return {n:1, t:'margen mínimo',  c:'no'};
+  if(edge<5)  return {n:2, t:'valor moderado', c:''};
+  return           {n:3, t:'valor fuerte',    c:'big'};
+}
+/* Ranking de todas las proposiciones del juego, de mejor a peor por EV.
+   Es el orden matemático puro: cual paga mas de lo que deberia. */
+function actualizarRanking(root){
+  var caja=root.querySelector('.rank');
+  if(!caja) return;
+  var lista=[];
+  recolectar(root).forEach(function(m){
+    var v=valor(m.p,m.am,m.push);
+    if(v){ m.v=v; lista.push(m); }
+  });
+  if(!lista.length){ caja.innerHTML=''; return; }
+  lista.sort(function(a,b){ return b.v.ev-a.v.ev; });
+  var buenos=lista.filter(function(m){ return m.v.ev>0 && m.v.ventaja>=2; });
+  var o='<h3>Ranking del juego</h3>';
+  if(!buenos.length){
+    o+='<div class="pick no"><div class="q">Nada que jugar aquí</div><div class="r">'+
+       'De '+lista.length+' proposiciones con cuota, ninguna llega a 2 puntos de ventaja. '+
+       'El mejor intento es '+esc(lista[0].m)+' con '+lista[0].v.ventaja.toFixed(1)+' puntos.</div></div>';
+  }
+  buenos.forEach(function(m,i){
+    var nv=nivel(m.v.ventaja,m.v.ev);
+    var medalla=['🥇','🥈','🥉'][i]||(i+1)+'.';
+    o+='<div class="pick '+nv.c+'"><div class="q">'+medalla+' '+esc(m.m)+' '+esc(String(m.am))+'</div>'+
+       '<div class="r">'+nv.t+' · tú '+m.p.toFixed(1)+'% contra '+m.v.imp.toFixed(1)+'% del book · '+
+       '+'+m.v.ventaja.toFixed(1)+' puntos · EV +'+(m.v.ev*100).toFixed(1)+'% por dólar'+
+       (m.v.stake?' · ¼ Kelly $'+m.v.stake.toFixed(2):'')+
+       (m.push>0.5?' · empata en la línea '+m.push.toFixed(1)+'% de las veces':'')+
+       '</div>'+
+       '<div class="acc" style="margin-top:8px"><button class="ghost gp" data-m="'+esc(m.m)+
+       '" data-p="'+m.p.toFixed(2)+'" data-am="'+esc(String(m.am))+'">Guardar pick</button></div>'+
+       '</div>';
+  });
+  var fuera=lista.length-buenos.length;
+  if(fuera>0) o+='<div class="flag">Las otras '+fuera+' proposiciones con cuota no pagan lo suficiente y quedaron fuera.</div>';
+  if(buenos.length>1) o+='<div class="flag">Están ordenadas por EV, que es cuánto esperas ganar por cada dólar. '+
+     'Ojo: los mercados de un mismo juego están correlacionados — si el favorito gana, el Under suele acompañar. '+
+     'Jugar dos de esta lista no es diversificar, es doblar la misma apuesta.</div>';
+  var cap=root.querySelector('.cmp');
+  if(cap&&cap.dataset.cap==='1') o+='<div class="flag">⚠️ El moneyline quedó fuera del ranking: el porcentaje del modelo '+
+     'chocó con el tope y ya no es comparable contra la cuota.</div>';
+  caja.innerHTML=o;
+  var juego=caja.dataset.juego||'—', fecha=caja.dataset.fecha||hoyISO();
+  caja.querySelectorAll('button.gp').forEach(function(b){
+    var base={f:fecha, juego:juego, m:b.dataset.m, p:+b.dataset.p, am:b.dataset.am};
+    /* Si ya esta en el registro, el boton nace marcado: repintar la tarjeta
+       (cambiar banca, multiplicador o modo) no puede duplicar un pick. */
+    if(regExiste(base)){ b.textContent='Ya guardado ✓'; b.disabled=true; return; }
+    b.addEventListener('click',function(){
+      var id=regAdd({f:base.f, juego:base.juego, m:base.m, p:base.p,
+                     am:base.am, cierre:null, res:null});
+      if(id){ b.textContent='Guardado ✓'; b.disabled=true; pintarRegistro(); }
+      else if(regExiste(base)){ b.textContent='Ya guardado ✓'; b.disabled=true; }
+      else { b.textContent='No se pudo guardar'; }
+    });
+  });
+}
+
 /* Veredicto real: no lo decide la probabilidad sola sino el edge contra la cuota.
    64% a -200 es mala apuesta; 55% a +120 es buena. */
 function veredictoEV(pA,pH,amA,amH,nomA,nomH,vc){
   var dv=devig(amA,amH);
   if(!dv) return null;
   var bk=banca();
-  var lados=[{n:nomA,p:pA/100,am:parseFloat(amA),imp:dv.impA,fair:dv.fairA},
-             {n:nomH,p:pH/100,am:parseFloat(amH),imp:dv.impH,fair:dv.fairH}];
+  var lados=[{n:nomA,p:pA/100,am:numOdds(amA),imp:dv.impA,fair:dv.fairA},
+             {n:nomH,p:pH/100,am:numOdds(amH),imp:dv.impH,fair:dv.fairH}];
   lados.forEach(function(L){
     L.ev=evUnit(L.p,L.am);
     L.edge=L.p*100-L.imp;          /* contra lo que te pagan */
@@ -870,6 +1214,9 @@ function cargar(){
   $('slate').innerHTML='';
   $('status').className='status';
   $('status').textContent='Buscando juegos…';
+  if(LIGA_YEAR!==+y){   /* cambio de temporada: los promedios viejos no sirven */
+    K_LIGA=null; LIGA_ERA=null; LIGA_RG=null; STAND=null; LIGA_YEAR=+y;
+  }
   kLiga(+y); ligaEra(+y); standings(+y);
   j(API+'/schedule?sportId=1&date='+m+'/'+d+'/'+y+'&hydrate=probablePitcher,team,venue(location,fieldInfo)').then(function(data){
     var games=(data.dates&&data.dates[0]&&data.dates[0].games)||[];
@@ -934,8 +1281,18 @@ function fila(g,year){
 
 function pintar(el){
   var body=el.querySelector('.body');
+  /* Guardar las cuotas ya tecleadas: cambiar la banca o el multiplicador
+     repinta la tarjeta y antes las borraba. */
+  var prev=[];
+  body.querySelectorAll('input').forEach(function(i){ prev.push(i.value); });
   body.innerHTML=detalle(el._d);
+  var ahora=body.querySelectorAll('input');
+  if(prev.length===ahora.length)
+    ahora.forEach(function(i,k){ i.value=prev[k]; });
   conectar(body);
+  body.querySelectorAll('input').forEach(function(i){
+    if(i.value!=='') i.dispatchEvent(new Event('input'));
+  });
 }
 
 function detalle(x){
@@ -968,7 +1325,11 @@ function detalle(x){
   }
   var penA=penal(x.qa), penH=penal(x.qh);
   var pAjuste=penA-penH;
-  var pctFinal=Math.max(32,Math.min(68,r.pct+pAjuste));
+  var bruto2=r.pct+pAjuste;
+  /* El ajuste de bullpen puede empujar el numero fuera del tope: hay que volver a
+     marcar capped, si no el veredicto por EV corre sobre un porcentaje recortado. */
+  if(bruto2>78||bruto2<22) r.capped=true;
+  var pctFinal=Math.max(22,Math.min(78,bruto2));
   r.pctBase=r.pct; r.penA=penA; r.penH=penH; r.pct=pctFinal;
 
   var pH=r.pct, pA=100-pH, homeLead=pH>=50;
@@ -1009,6 +1370,12 @@ function detalle(x){
   var favPor2 = homeLead ? matriz(lamA,lamH,function(xx,yy){return yy-xx>=2;})
                          : matriz(lamA,lamH,function(xx,yy){return xx-yy>=2;});
   var dogMas15 = 1-favPor2;
+  /* Cruce: el handicap sale del Poisson y el ganador sale de la formula. Si los dos
+     no cuentan la misma historia, uno de los dos numeros esta mal. El empate del
+     Poisson se reparte mitad y mitad porque en beisbol se resuelve en extras. */
+  var pEmp=matriz(lamA,lamH,function(xx,yy){return xx===yy;});
+  var pPoisH=(matriz(lamA,lamH,function(xx,yy){return yy>xx;})+pEmp/2)*100;
+  var brecha=Math.abs(pPoisH-pH);
 
   var pick;
   if(vc<0.50) pick='<div class="pick no"><div class="q">Sin pick al ganador</div><div class="r">Ventaja de solo '+vc.toFixed(2)+' carreras, por debajo de tu corte de 0.50. Muy parejos.</div></div>';
@@ -1020,7 +1387,7 @@ function detalle(x){
   if(l5a.n<5||l5h.n<5) avisos.push('Muestra corta en últimas salidas: '+l5a.n+' y '+l5h.n+'.');
   if(sea.ip<20||seh.ip<20) avisos.push('Poco volumen de temporada en uno de los abridores.');
   if(ba.aprox||bh.aprox) avisos.push('ERA de bullpen sin split; se usó el del equipo completo (*) y viene inflado por los abridores.');
-  if(r.capped) avisos.push('El porcentaje crudo pasó del límite y quedó recortado en el techo.');
+  if(r.capped) avisos.push('El porcentaje del modelo chocó con el tope de 22–78%: su número real quedaba fuera de ese rango, así que el moneyline no se compara contra la cuota en este juego.');
   if(OFF==='mix'&&(!x.o14a||x.o14a.rg==null||!x.o14h||x.o14h.rg==null)) avisos.push('Falta ofensiva de 14 días en un equipo; ese lado va con el promedio de temporada.');
 
   var out=
@@ -1029,8 +1396,10 @@ function detalle(x){
     '<span class="'+(homeLead?'lead':'trail')+'" style="flex-grow:'+pH.toFixed(1)+'">'+pH.toFixed(1)+'%</span>'+
   '</div>'+
   '<div class="pickbox">'+pick+'</div>'+
-  '<div class="flag">Este veredicto sale solo del modelo. Mete las dos cuotas abajo en '+
-  '<b>Compara con el book</b> y se recalcula por valor real contra la línea.</div>'+
+  '<div class="flag">Este veredicto sale solo del modelo. Mete las cuotas más abajo y '+
+  'se recalcula por valor real contra la línea.</div>'+
+  '<div class="rank" data-juego="'+esc(a.team.abbreviation||a.team.name)+' @ '+
+    esc(h.team.abbreviation||h.team.name)+'" data-fecha="'+esc(ymd(x.fecha))+'"></div>'+
   '<h3>Los números</h3>'+
   '<table>'+
   '<tr><th></th><th>'+nomA+'</th><th>'+nomH+'</th></tr>'+
@@ -1076,8 +1445,18 @@ function detalle(x){
   '<table>'+
   '<tr><td>'+abrGana+' −1.5 (gana por 2+)</td><td class="n">'+pc(favPor2)+'</td><td class="n">'+american(favPor2*100)+'</td></tr>'+
   '<tr><td>'+abrPierde+' +1.5</td><td class="n">'+pc(dogMas15)+'</td><td class="n">'+american(dogMas15*100)+'</td></tr>'+
+  '<tr><td>Ganador según este Poisson</td><td class="n" colspan="2">'+pPoisH.toFixed(1)+'% al local</td></tr>'+
+  (brecha>=4?'<tr><td>Se separa de tu fórmula en</td><td class="n" colspan="2">'+brecha.toFixed(1)+' puntos</td></tr>':'')+
   '</table>'+
+  (brecha>=4?'<div class="flag">⚠️ El hándicap sale del Poisson y el ganador sale de tu fórmula, y aquí se separan '+
+    brecha.toFixed(1)+' puntos. Los dos no pueden tener razón a la vez: si juegas el hándicap en este partido, hazlo con medio stake.</div>':'')+
+  '<div class="row" data-hc="1" data-pf="'+(favPor2*100).toFixed(3)+'" data-pd="'+(dogMas15*100).toFixed(3)+
+    '" data-nf="'+abrGana+'" data-nd="'+abrPierde+'">'+
+    '<label>'+abrGana+' −1.5</label><input type="text" class="hf" placeholder="+175">'+
+    '<label>'+abrPierde+' +1.5</label><input type="text" class="hd" placeholder="-175">'+
+    '<div class="out"></div></div>'+
   '<div class="flag">Recuerda tu equivalencia de Kalshi: el +1.5 del underdog es el "No" al contrato de que el favorito gana por más de 1.5.</div>'+
+  '<div class="flag">Si el favorito es el local, este número viene algo optimista: el local no batea el noveno cuando va ganando, así que gana por 2+ menos seguido de lo que dice un modelo de nueve innings completos.</div>'+
 
   '<h3>Contexto del parque</h3>'+
   contexto(x,pfv,Tbase,T,notaTemp)+
@@ -1085,9 +1464,9 @@ function detalle(x){
   '<h3>Total</h3>'+
   '<div class="flag">Total esperado: <b>'+num(T,1)+' carreras</b> (crudo '+num(Tbase,1)+', ajustado por parque, temperatura e innings extra).</div>'+
   '<div class="row" data-tot="'+T.toFixed(3)+'">'+
-    '<label>Línea</label><input type="number" step="0.5" class="tl" placeholder="8.5">'+
-    '<label>Over</label><input type="number" class="to" placeholder="-110">'+
-    '<label>Under</label><input type="number" class="tu" placeholder="-110">'+
+    '<label>Línea</label><input type="number" inputmode="decimal" step="0.5" class="tl" placeholder="8.5">'+
+    '<label>Over</label><input type="text" class="to" placeholder="-110">'+
+    '<label>Under</label><input type="text" class="tu" placeholder="-110">'+
     '<div class="out"></div></div>'+
 
   '<h3>Ponches del abridor</h3>'+
@@ -1099,9 +1478,9 @@ function detalle(x){
   (avisos.length?'<div class="flag">'+avisos.map(esc).join(' ')+'</div>':'')+
 
   '<h3>Compara con el book</h3>'+
-  '<div class="row cmp" data-pa="'+pA+'" data-ph="'+pH+'" data-na="'+nomA+'" data-nh="'+nomH+'" data-vc="'+vc.toFixed(3)+'">'+
-    '<label>'+nomA+'</label><input type="number" class="ca" placeholder="+135">'+
-    '<label>'+nomH+'</label><input type="number" class="ch" placeholder="-155">'+
+  '<div class="row cmp" data-pa="'+pA+'" data-ph="'+pH+'" data-na="'+nomA+'" data-nh="'+nomH+'" data-vc="'+vc.toFixed(3)+'" data-cap="'+(r.capped?1:0)+'">'+
+    '<label>'+nomA+'</label><input type="text" class="ca" placeholder="+135">'+
+    '<label>'+nomH+'</label><input type="text" class="ch" placeholder="-155">'+
     '<div class="out"></div></div>'+
   '<div class="devig"></div>';
   return out;
@@ -1127,9 +1506,9 @@ function kBloque(nombre,se,rival,abrRival,l5){
     (av.length?'<div class="flag">⚠️ '+av.map(esc).join(' ')+'</div>':'')+
     '<div class="row" data-k="'+lam.toFixed(3)+'" data-n="'+esc(nombre)+'">'+
       '<label>K esperados: '+num(lam,1)+' — línea</label>'+
-      '<input type="number" step="0.5" class="kl" placeholder="5.5">'+
-      '<label>Over</label><input type="number" class="ko" placeholder="-120">'+
-      '<label>Under</label><input type="number" class="ku" placeholder="+100">'+
+      '<input type="number" inputmode="decimal" step="0.5" class="kl" placeholder="5.5">'+
+      '<label>Over</label><input type="text" class="ko" placeholder="-120">'+
+      '<label>Under</label><input type="text" class="ku" placeholder="+100">'+
       '<div class="out"></div></div>';
 }
 
@@ -1150,18 +1529,19 @@ function conectar(root){
     var T=+box.dataset.tot, out=box.querySelector('.out');
     var ev=function(){
       var L=parseFloat(box.querySelector('.tl').value);
-      if(!isFinite(L)){ out.textContent=''; out.className='out'; return; }
+      if(!isFinite(L)){ out.textContent=''; out.className='out'; actualizarRanking(root); return; }
       var p=pOver(L,T);
       var lineas=['Over '+L+': '+pc(p.over)+' (justa '+american(p.over*100)+') · Under: '+pc(p.under)+' (justa '+american(p.under*100)+')'+
                   (p.push>0.01?' · empate en la línea '+pc(p.push):'')];
       var hay=false;
       [['Over',p.over,box.querySelector('.to').value],['Under',p.under,box.querySelector('.tu').value]]
         .forEach(function(t){
-          var r=txtValor(t[0],t[1]*100,t[2]);
+          var r=txtValor(t[0],t[1]*100,t[2],p.push*100);
           if(r){ lineas.push(r.t); if(r.ok) hay=true; }
         });
       out.className='out '+(hay?'si':'no');
       out.innerHTML=lineas.map(esc).join('<br>');
+      actualizarRanking(root);
     };
     box.querySelectorAll('input').forEach(function(i){ i.addEventListener('input',ev); });
   });
@@ -1169,18 +1549,34 @@ function conectar(root){
     var lam=+box.dataset.k, out=box.querySelector('.out');
     var ev=function(){
       var L=parseFloat(box.querySelector('.kl').value);
-      if(!isFinite(L)){ out.textContent=''; out.className='out'; return; }
+      if(!isFinite(L)){ out.textContent=''; out.className='out'; actualizarRanking(root); return; }
       var p=pOver(L,lam);
       var lineas=['Over '+L+' K: '+pc(p.over)+' (justa '+american(p.over*100)+') · Under: '+pc(p.under)+' (justa '+american(p.under*100)+')'+
                   (p.push>0.01?' · empate '+pc(p.push):'')];
       var hay=false;
       [['Over',p.over,box.querySelector('.ko').value],['Under',p.under,box.querySelector('.ku').value]]
         .forEach(function(t){
-          var r=txtValor(t[0],t[1]*100,t[2]);
+          var r=txtValor(t[0],t[1]*100,t[2],p.push*100);
           if(r){ lineas.push(r.t); if(r.ok) hay=true; }
         });
       out.className='out '+(hay?'si':'no');
       out.innerHTML=lineas.map(esc).join('<br>');
+      actualizarRanking(root);
+    };
+    box.querySelectorAll('input').forEach(function(i){ i.addEventListener('input',ev); });
+  });
+  root.querySelectorAll('.row[data-hc]').forEach(function(box){
+    var pf=+box.dataset.pf, pd=+box.dataset.pd, out=box.querySelector('.out');
+    var ev=function(){
+      var msgs=[], hay=false;
+      [[box.dataset.nf+' −1.5',pf,box.querySelector('.hf').value],
+       [box.dataset.nd+' +1.5',pd,box.querySelector('.hd').value]].forEach(function(t){
+        var r=txtValor(t[0],t[1],t[2]);
+        if(r){ msgs.push(r.t); if(r.ok) hay=true; }
+      });
+      if(!msgs.length){ out.textContent=''; out.className='out'; }
+      else { out.className='out '+(hay?'si':'no'); out.innerHTML=msgs.map(esc).join('<br>'); }
+      actualizarRanking(root);
     };
     box.querySelectorAll('input').forEach(function(i){ i.addEventListener('input',ev); });
   });
@@ -1215,8 +1611,8 @@ function conectar(root){
           if(!il.length){
             html+='<div class="flag">Lesionados de '+esc(t[1])+': ninguno en la lista.</div>';
           }else{
-            var reg=t[2]||[];
-            var claves=il.filter(function(p){ return reg.indexOf(p.id)>=0; });
+            var regs=t[2]||[];
+            var claves=il.filter(function(p){ return regs.indexOf(p.id)>=0; });
             html+='<div class="flag">Lesionados de '+esc(t[1])+' ('+il.length+'): '+
               esc(il.map(function(p){return p.n;}).join(', '))+'.'+
               (claves.length?' <b>'+esc(claves.map(function(p){return p.n;}).join(', '))+
@@ -1238,14 +1634,25 @@ function conectar(root){
     var vc=box.dataset.vc!=null?+box.dataset.vc:null;
     var caja=root.querySelector('.pickbox');
     var zona=box.parentNode.querySelector('.devig');
+    var cap=box.dataset.cap==='1';
     var orig=caja?caja.innerHTML:null;
     var ev=function(){
       var va=box.querySelector('.ca').value, vh=box.querySelector('.ch').value;
-      var v=veredictoEV(pA,pH,va,vh,nomA,nomH,vc);
+      var v=cap?null:veredictoEV(pA,pH,va,vh,nomA,nomH,vc);
+      if(cap&&va&&vh){
+        if(caja&&orig!=null) caja.innerHTML=orig;
+        if(zona) zona.innerHTML='<div class="flag">⚠️ El porcentaje del modelo chocó con el tope '+
+          '(22–78%), o sea que su número real quedaba fuera de ese rango. Comparado contra la cuota '+
+          'eso inventa ventaja en el underdog. No se recalcula el veredicto en este juego.</div>';
+        out.textContent=''; out.className='out';
+        actualizarRanking(root);
+        return;
+      }
       if(v){
         if(caja) caja.innerHTML=v;
         if(zona) zona.innerHTML='<div class="flag">El veredicto de arriba ya está recalculado con estas cuotas.</div>';
         out.textContent=''; out.className='out';
+        actualizarRanking(root);
         return;
       }
       /* Falta una de las dos cuotas: no se puede quitar el vig, se muestra lo crudo. */
@@ -1255,9 +1662,10 @@ function conectar(root){
       var ra=txtValor(nomA,pA,va);
       var rh=txtValor(nomH,pH,vh);
       [ra,rh].forEach(function(r){ if(r){ msgs.push(r.t); if(r.ok) hay=true; } });
-      if(!msgs.length){ out.textContent=''; out.className='out'; return; }
+      if(!msgs.length){ out.textContent=''; out.className='out'; actualizarRanking(root); return; }
       out.className='out '+(hay?'si':'no');
       out.innerHTML=msgs.map(esc).join('<br>');
+      actualizarRanking(root);
     };
     box.querySelectorAll('input').forEach(function(i){ i.addEventListener('input',ev); });
   });
@@ -1285,8 +1693,8 @@ $('calcular').addEventListener('click',function(){
     '<tr><td>Cuota justa</td><td class="n">'+american(pA)+'</td><td class="n">'+american(pH)+'</td></tr></table>'+
     (r.capped?'<div class="flag">El porcentaje crudo pasó del límite y quedó recortado.</div>':'')+
     '<div class="row cmp" data-pa="'+pA+'" data-ph="'+pH+'" data-na="Visita" data-nh="Local" data-vc="'+vc.toFixed(3)+'">'+
-      '<label>Visita</label><input type="number" class="ca" placeholder="+135">'+
-      '<label>Local</label><input type="number" class="ch" placeholder="-155">'+
+      '<label>Visita</label><input type="text" class="ca" placeholder="+135">'+
+      '<label>Local</label><input type="text" class="ch" placeholder="-155">'+
       '<div class="out"></div></div>'+
     '<div class="devig"></div>';
   conectar($('manual_out'));
@@ -1311,6 +1719,31 @@ $('banca').addEventListener('input',function(){
   var gs=document.querySelectorAll('.game');
   for(var i=0;i<gs.length;i++){ if(gs[i]._d) pintar(gs[i]); }
 });
+$('reg_backup').addEventListener('click',function(){
+  var t=JSON.stringify(regLeer());
+  var m=$('reg_msg');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){
+      m.textContent='Respaldo copiado. Pégalo en una nota tuya y guárdalo.';
+    },function(){ m.textContent=t; });
+  }else{ m.textContent=t; }
+});
+$('reg_import').addEventListener('click',function(){
+  var t=prompt('Pega aquí el respaldo. Se SUMA a lo que ya tienes, no lo reemplaza.');
+  if(!t) return;
+  var m=$('reg_msg');
+  try{
+    var nuevos=JSON.parse(t);
+    if(!Array.isArray(nuevos)) throw new Error('formato');
+    var a=regLeer(), vistos={};
+    a.forEach(function(p){ vistos[p.id]=1; });
+    var sum=0;
+    nuevos.forEach(function(p){ if(p&&p.id&&!vistos[p.id]){ a.push(p); sum++; } });
+    regEscribir(a); pintarRegistro();
+    m.textContent='Se agregaron '+sum+' picks.';
+  }catch(e){ m.textContent='Ese texto no es un respaldo válido.'; }
+});
+pintarRegistro();
 $('cargar').addEventListener('click',cargar);
 $('limpiar').addEventListener('click',function(){
   cache.hit={};cache.pen={};cache.log={};cache.sea={};cache.mano={};cache.split={};
