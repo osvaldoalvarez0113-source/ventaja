@@ -113,6 +113,11 @@ footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
   </select>
 </div>
 
+<div class="modo">
+  <label for="banca">Banca (opcional, para el ¼ de Kelly):</label>
+  <input type="number" id="banca" placeholder="1000" style="width:110px">
+</div>
+
 <div id="status" class="status">Escoge la fecha y dale a cargar.</div>
 <div id="slate"></div>
 
@@ -133,7 +138,9 @@ footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
   Datos: MLB Stats API. El ganador sale de tu fórmula de ventaja. El hándicap, el total y los ponches
   salen de una distribución de Poisson montada sobre esas mismas carreras esperadas, así que los cuatro
   mercados cuentan la misma historia. El total usa la misma tabla de park factors y la misma amortiguación al 60% que contexto_juego.py de Betbot,
-  más la temperatura real de Open-Meteo a la hora del juego. El multiplicador de carreras a porcentaje viene por defecto en ×13, que es lo que dan Poisson y Pythagorean
+  más la temperatura real de Open-Meteo a la hora del juego. Si metes tu banca arriba, cada mercado con valor te sugiere el stake con un cuarto de Kelly, la misma
+  fracción que usa Betbot. El hándicap se calcula sobre nueve innings; las carreras de extras solo entran
+  al total. El multiplicador de carreras a porcentaje viene por defecto en ×13, que es lo que dan Poisson y Pythagorean
   para una diferencia de carreras dada; ×17 era el número original y se puede escoger arriba para comparar.
   Al total se le suman 0.18 carreras por los innings extra, que ocurren en cerca de uno de cada once juegos y
   el modelo de nueve innings no cuenta. El bullpen quemado se mide contra la fecha oficial local del juego.
@@ -224,6 +231,27 @@ function american(p){
   if(p<=0||p>=100) return '—';
   if(p>=50) return '-'+Math.round(p/(100-p)*100);
   return '+'+Math.round((100-p)/p*100);
+}
+function banca(){ var v=parseFloat(($('banca')||{}).value); return isFinite(v)&&v>0?v:null; }
+function decimal(am){ return am>0 ? am/100 : 100/(-am); }
+function valor(pPct,amStr){
+  var am=parseFloat(amStr);
+  if(!isFinite(am)||am===0) return null;
+  var imp=implied(am); if(imp==null) return null;
+  var p=pPct/100, b=decimal(am);
+  var ventaja=p-imp/100;
+  var f=(p*(b+1)-1)/b;              /* Kelly completo */
+  var bk=banca();
+  return {imp:imp, ventaja:ventaja*100, kelly:f,
+          stake: (bk&&f>0)? bk*f*0.25 : null};   /* cuarto de Kelly, como Betbot */
+}
+function txtValor(etiqueta,pPct,amStr){
+  var v=valor(pPct,amStr);
+  if(!v) return null;
+  if(v.ventaja<=0) return {ok:false, t:etiqueta+': sin valor — tú '+pPct.toFixed(1)+'%, el book paga '+v.imp.toFixed(1)+'%'};
+  var t=etiqueta+': valor +'+v.ventaja.toFixed(1)+' pts — tú '+pPct.toFixed(1)+'%, el book paga '+v.imp.toFixed(1)+'%';
+  if(v.stake) t+=' · ¼ Kelly $'+v.stake.toFixed(2);
+  return {ok:true, t:t};
 }
 function implied(v){
   var n=parseFloat(v);
@@ -507,12 +535,17 @@ function manosBloque(x,fA,fH,nomA,nomH){
 }
 function quemBloque(q,nom){
   if(!q) return '';
-  if(q.seguidos.length)
-    return '<div class="flag">🔥 Bullpen de <b>'+nom+'</b>: '+esc(q.seguidos.join(', '))+' lanzaron dos días seguidos. Probablemente no estén disponibles hoy o lleguen cansados.</div>';
+  if(q.seguidos.length){
+    var uno=q.seguidos.length===1;
+    return '<div class="flag">🔥 Bullpen de <b>'+nom+'</b>: '+esc(q.seguidos.join(', '))+
+      (uno?' lanzó':' lanzaron')+' dos días seguidos. Probablemente '+
+      (uno?'no esté disponible hoy o llegue cansado':'no estén disponibles hoy o lleguen cansados')+'.</div>';
+  }
   if(q.ayer.length>=3)
     return '<div class="flag">Bullpen de <b>'+nom+'</b>: '+q.ayer.length+' relevistas lanzaron ayer ('+esc(q.ayer.slice(0,4).join(', '))+'). Uso pesado reciente.</div>';
   if(q.ayer.length)
-    return '<div class="flag">Bullpen de <b>'+nom+'</b>: descansado, solo '+q.ayer.length+' relevista(s) lanzaron ayer.</div>';
+    return '<div class="flag">Bullpen de <b>'+nom+'</b>: descansado, '+
+      (q.ayer.length===1?'solo un relevista lanzó ayer':'solo '+q.ayer.length+' relevistas lanzaron ayer')+'.</div>';
   return '<div class="flag">Bullpen de <b>'+nom+'</b>: descansado, nadie lanzó ayer.</div>';
 }
 function contexto(x,pfv,Tbase,T,notaTemp){
@@ -621,7 +654,6 @@ function pintar(el){
 
 function detalle(x){
   var a=x.a,h=x.h,pa=x.pa,ph=x.ph,l5a=x.l5a,l5h=x.l5h,sea=x.sea,seh=x.seh,oa=x.oa,oh=x.oh,ba=x.ba,bh=x.bh;
-  x.oa=oa; x.oh=oh;
   var eA=eraUsado(sea,l5a), eH=eraUsado(seh,l5h);
   var cA=eraCrudo(sea,l5a), cH=eraCrudo(seh,l5h);
   if(eA==null||eH==null||oa.rg==null||oh.rg==null||ba.era==null||bh.era==null)
@@ -680,9 +712,10 @@ function detalle(x){
   var bruto=pfv*fTemp;
   var fSuave=1+(bruto-1)*SUAVE;
   var Tbase=T;
-  T=T*fSuave+EXTRAS;
+  var T9=T*fSuave;      /* nueve innings: es lo que decide el margen */
+  T=T9+EXTRAS;          /* total del juego completo, con extras */
   var dEf=(r.pct-50)/MULT;
-  var lamH=(T+dEf)/2, lamA=(T-dEf)/2;
+  var lamH=(T9+dEf)/2, lamA=(T9-dEf)/2;
   if(lamA<0.5){lamA=0.5;} if(lamH<0.5){lamH=0.5;}
 
   /* handicap: probabilidad de ganar por 2 o mas */
@@ -753,7 +786,9 @@ function detalle(x){
   '<h3>Total</h3>'+
   '<div class="flag">Total esperado: <b>'+num(T,1)+' carreras</b> (crudo '+num(Tbase,1)+', ajustado por parque, temperatura e innings extra).</div>'+
   '<div class="row" data-tot="'+T.toFixed(3)+'">'+
-    '<label>Línea del book</label><input type="number" step="0.5" class="tl" placeholder="8.5">'+
+    '<label>Línea</label><input type="number" step="0.5" class="tl" placeholder="8.5">'+
+    '<label>Over</label><input type="number" class="to" placeholder="-110">'+
+    '<label>Under</label><input type="number" class="tu" placeholder="-110">'+
     '<div class="out"></div></div>'+
 
   '<h3>Ponches del abridor</h3>'+
@@ -778,11 +813,19 @@ function kBloque(nombre,se,rival,abrRival){
   var liga=K_LIGA||0.225;
   var adj=(rival.kpct!=null)? rival.kpct/liga : 1;
   var lam=(se.k9/9)*se.ipx*adj;
+  var av=[];
+  if(se.ipx<4.5) av.push('Solo aguanta '+num(se.ipx,1)+' innings por salida — puede ser abridor de apertura corta o venir de lesión. La proyección de ponches con esa base no es confiable.');
+  if(se.k9<7.5)  av.push('K/9 de '+num(se.k9,1)+': no es pitcher de ponchar. Si le pegan temprano lo sacan y el número se cae rápido.');
+  if(se.gs<8)    av.push('Solo '+se.gs+' aperturas de temporada, muestra corta.');
   return '<div class="flag"><b>'+esc(nombre)+'</b> — K/9 '+num(se.k9,1)+' · '+num(se.ipx,1)+' IP por salida · '+
     esc(abrRival)+' poncha '+(rival.kpct!=null?(rival.kpct*100).toFixed(1)+'%':'—')+' de sus turnos (liga '+(liga*100).toFixed(1)+'%) → ajuste ×'+num(adj,2)+'</div>'+
+    (av.length?'<div class="flag">⚠️ '+av.map(esc).join(' ')+'</div>':'')+
     '<div class="row" data-k="'+lam.toFixed(3)+'" data-n="'+esc(nombre)+'">'+
       '<label>K esperados: '+num(lam,1)+' — línea</label>'+
-      '<input type="number" step="0.5" class="kl" placeholder="5.5"><div class="out"></div></div>';
+      '<input type="number" step="0.5" class="kl" placeholder="5.5">'+
+      '<label>Over</label><input type="number" class="ko" placeholder="-120">'+
+      '<label>Under</label><input type="number" class="ku" placeholder="+100">'+
+      '<div class="out"></div></div>';
 }
 
 function desglose(r,nomA,nomH){
@@ -799,30 +842,42 @@ function desglose(r,nomA,nomH){
 
 function conectar(root){
   root.querySelectorAll('.row[data-tot]').forEach(function(box){
-    var T=+box.dataset.tot, out=box.querySelector('.out'), inp=box.querySelector('.tl');
-    inp.addEventListener('input',function(){
-      var L=parseFloat(inp.value);
+    var T=+box.dataset.tot, out=box.querySelector('.out');
+    var ev=function(){
+      var L=parseFloat(box.querySelector('.tl').value);
       if(!isFinite(L)){ out.textContent=''; out.className='out'; return; }
       var p=pOver(L,T);
-      var lado = p.over>p.under ? 'Over' : 'Under';
-      var pp = Math.max(p.over,p.under);
-      out.className='out '+(pp>=0.55?'si':'no');
-      out.textContent=lado+' '+L+' · '+pc(pp)+' · cuota justa '+american(pp*100)+
-        (p.push>0.01?' · empate en la línea '+pc(p.push):'');
-    });
+      var lineas=['Over '+L+': '+pc(p.over)+' (justa '+american(p.over*100)+') · Under: '+pc(p.under)+' (justa '+american(p.under*100)+')'+
+                  (p.push>0.01?' · empate en la línea '+pc(p.push):'')];
+      var hay=false;
+      [['Over',p.over,box.querySelector('.to').value],['Under',p.under,box.querySelector('.tu').value]]
+        .forEach(function(t){
+          var r=txtValor(t[0],t[1]*100,t[2]);
+          if(r){ lineas.push(r.t); if(r.ok) hay=true; }
+        });
+      out.className='out '+(hay?'si':'no');
+      out.innerHTML=lineas.map(esc).join('<br>');
+    };
+    box.querySelectorAll('input').forEach(function(i){ i.addEventListener('input',ev); });
   });
   root.querySelectorAll('.row[data-k]').forEach(function(box){
-    var lam=+box.dataset.k, out=box.querySelector('.out'), inp=box.querySelector('.kl');
-    inp.addEventListener('input',function(){
-      var L=parseFloat(inp.value);
+    var lam=+box.dataset.k, out=box.querySelector('.out');
+    var ev=function(){
+      var L=parseFloat(box.querySelector('.kl').value);
       if(!isFinite(L)){ out.textContent=''; out.className='out'; return; }
       var p=pOver(L,lam);
-      var lado = p.over>p.under ? 'Over' : 'Under';
-      var pp = Math.max(p.over,p.under);
-      out.className='out '+(pp>=0.55?'si':'no');
-      out.textContent=lado+' '+L+' K · '+pc(pp)+' · cuota justa '+american(pp*100)+
-        (p.push>0.01?' · empate '+pc(p.push):'');
-    });
+      var lineas=['Over '+L+' K: '+pc(p.over)+' (justa '+american(p.over*100)+') · Under: '+pc(p.under)+' (justa '+american(p.under*100)+')'+
+                  (p.push>0.01?' · empate '+pc(p.push):'')];
+      var hay=false;
+      [['Over',p.over,box.querySelector('.ko').value],['Under',p.under,box.querySelector('.ku').value]]
+        .forEach(function(t){
+          var r=txtValor(t[0],t[1]*100,t[2]);
+          if(r){ lineas.push(r.t); if(r.ok) hay=true; }
+        });
+      out.className='out '+(hay?'si':'no');
+      out.innerHTML=lineas.map(esc).join('<br>');
+    };
+    box.querySelectorAll('input').forEach(function(i){ i.addEventListener('input',ev); });
   });
   root.querySelectorAll('button.lu').forEach(function(btn){
     var out=btn.parentNode.querySelector('.lu-out');
@@ -863,12 +918,13 @@ function conectar(root){
   root.querySelectorAll('.cmp').forEach(function(box){
     var pA=+box.dataset.pa, pH=+box.dataset.ph, out=box.querySelector('.out');
     var ev=function(){
-      var ia=implied(box.querySelector('.ca').value), ih=implied(box.querySelector('.ch').value);
       var msgs=[], hay=false;
-      if(ia!=null){ if(pA>ia){hay=true;msgs.push('Visita: hay valor — book '+ia.toFixed(1)+'%, tú '+pA.toFixed(1)+'%');} else msgs.push('Visita: sin valor ('+ia.toFixed(1)+'% vs '+pA.toFixed(1)+'%)'); }
-      if(ih!=null){ if(pH>ih){hay=true;msgs.push('Local: hay valor — book '+ih.toFixed(1)+'%, tú '+pH.toFixed(1)+'%');} else msgs.push('Local: sin valor ('+ih.toFixed(1)+'% vs '+pH.toFixed(1)+'%)'); }
+      var ra=txtValor('Visita',pA,box.querySelector('.ca').value);
+      var rh=txtValor('Local', pH,box.querySelector('.ch').value);
+      [ra,rh].forEach(function(r){ if(r){ msgs.push(r.t); if(r.ok) hay=true; } });
+      if(!msgs.length){ out.textContent=''; out.className='out'; return; }
       out.className='out '+(hay?'si':'no');
-      out.textContent=msgs.join(' · ');
+      out.innerHTML=msgs.map(esc).join('<br>');
     };
     box.querySelectorAll('input').forEach(function(i){ i.addEventListener('input',ev); });
   });
@@ -909,6 +965,10 @@ $('mult').addEventListener('change',function(){
 });
 $('modo').addEventListener('change',function(){
   MODO=this.value;
+  var gs=document.querySelectorAll('.game');
+  for(var i=0;i<gs.length;i++){ if(gs[i]._d) pintar(gs[i]); }
+});
+$('banca').addEventListener('input',function(){
   var gs=document.querySelectorAll('.game');
   for(var i=0;i<gs.length;i++){ if(gs[i]._d) pintar(gs[i]); }
 });
