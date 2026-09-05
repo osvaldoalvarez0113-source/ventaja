@@ -124,8 +124,9 @@ footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
 <footer>
   Datos: MLB Stats API. El ganador sale de tu fórmula de ventaja. El hándicap, el total y los ponches
   salen de una distribución de Poisson montada sobre esas mismas carreras esperadas, así que los cuatro
-  mercados cuentan la misma historia. El total se ajusta por factor de parque (promedios aproximados de varios años) y por temperatura del
-  clima real de Open-Meteo a la hora del juego. El viento se muestra pero no se calcula. FIP = (13·HR + 3·(BB+HBP) − 2·K) ÷ IP + 3.15. Los ERA se ajustan por tamaño de muestra: un pitcher con pocos innings se jala hacia el promedio de la liga, para que una sola salida mala no rompa el cálculo.
+  mercados cuentan la misma historia. El total usa la misma tabla de park factors y la misma amortiguación al 60% que contexto_juego.py de Betbot,
+  más la temperatura real de Open-Meteo a la hora del juego. El viento se muestra pero no se calcula: hace falta
+  la orientación del jardín central de cada parque y ese dato no existe todavía en ningún lado. FIP = (13·HR + 3·(BB+HBP) − 2·K) ÷ IP + 3.15. Los ERA se ajustan por tamaño de muestra: un pitcher con pocos innings se jala hacia el promedio de la liga, para que una sola salida mala no rompa el cálculo.
 </footer>
 
 </div>
@@ -136,13 +137,43 @@ var cache={hit:{},pen:{},log:{},sea:{}};
 var MODO='mix';
 var K_LIGA=null;
 var LIGA_ERA=null;
-/* Factor de carreras del parque. 100 = neutral. Promedios de varios años, aproximados. */
+/* Park factors por venue_id — misma tabla que contexto_juego.py de Betbot.
+   [nombre, factor, techo]. techo: abierto | retractil | techo (cerrado fijo). */
 var PARK={
- COL:113, BOS:107, CIN:105, ATH:105, CHC:103, ARI:103, PHI:102, NYY:102,
- KC:101, TOR:101, ATL:101, TEX:100, MIN:100, MIL:100, BAL:99, CWS:99,
- HOU:99, WSH:99, CLE:98, DET:98, LAD:98, LAA:97, STL:97, PIT:97,
- NYM:97, MIA:96, TB:95, SD:95, SF:94, SEA:93
+ 19:   ['Coors Field',1.28,'abierto'],
+ 3313: ['Yankee Stadium',1.05,'abierto'],
+ 3309: ['Fenway Park',1.08,'abierto'],
+ 17:   ['Wrigley Field',1.02,'abierto'],
+ 31:   ['PNC Park',0.95,'abierto'],
+ 2680: ['Petco Park',0.93,'abierto'],
+ 2395: ['Oracle Park',0.90,'abierto'],
+ 22:   ['Dodger Stadium',0.97,'abierto'],
+ 2602: ['Great American',1.10,'abierto'],
+ 4169: ['loanDepot park',0.94,'retractil'],
+ 12:   ['Citi Field',0.96,'abierto'],
+ 2681: ['Citizens Bank',1.06,'abierto'],
+ 3312: ['Target Field',1.00,'abierto'],
+ 4:    ['Angel Stadium',0.98,'abierto'],
+ 2392: ['Daikin Park',1.03,'retractil'],
+ 680:  ['T-Mobile Park',0.92,'retractil'],
+ 14:   ['Rogers Centre',1.02,'retractil'],
+ 15:   ['Chase Field',1.04,'retractil'],
+ 16:   ['Comerica Park',0.97,'abierto'],
+ 7:    ['Kauffman Stadium',1.01,'abierto'],
+ 32:   ['Nationals Park',1.00,'abierto'],
+ 2:    ['Oriole Park',1.02,'abierto'],
+ 5325: ['Globe Life Field',0.99,'retractil'],
+ 4705: ['Truist Park',1.02,'abierto'],
+ 3289: ['Busch Stadium',0.97,'abierto'],
+ 2287: ['American Family',1.01,'retractil'],
+ 5:    ['Rate Field',1.04,'abierto'],
+ 2394: ['Progressive Field',0.99,'abierto'],
+ 10:   ['Sutter Health Park',0.96,'abierto'],
+ 12266:['Steinbrenner Field',1.03,'abierto'],
+ 2523: ['Tropicana Field',0.96,'techo']
 };
+/* Igual que ajustar_total() en Betbot: solo se aplica el 60% del ajuste bruto. */
+var SUAVE=0.6;
 
 /* ---------- probabilidad ---------- */
 function pmf(k,l){ if(l<=0) return k===0?1:0; var p=Math.exp(-l); for(var i=1;i<=k;i++) p=p*l/i; return p; }
@@ -325,9 +356,10 @@ function suerte(nombre,se){
 function contexto(x,pfv,Tbase,T,notaTemp){
   var o='<table>';
   o+='<tr><td>Parque</td><td class="n" colspan="2">'+esc(x.venue||'—')+'</td></tr>';
-  o+='<tr><td>Factor de carreras</td><td class="n" colspan="2">'+pfv+(pfv>103?' (favorece anotar)':pfv<97?' (favorece pitcheo)':' (neutral)')+'</td></tr>';
+  o+='<tr><td>Factor de carreras</td><td class="n" colspan="2">'+pfv.toFixed(2)+(pfv>1.03?' (favorece anotar)':pfv<0.97?' (favorece pitcheo)':' (neutral)')+'</td></tr>';
+  if(x.techo==='retractil') o+='<tr><td>Techo</td><td class="n" colspan="2">retráctil — puede estar abierto o cerrado</td></tr>';
   if(x.cerrado){
-    o+='<tr><td>Techo</td><td class="n" colspan="2">cerrado — sin clima</td></tr>';
+    o+='<tr><td>Techo</td><td class="n" colspan="2">cerrado — no aplica clima</td></tr>';
   }else if(x.cl){
     o+='<tr><td>Temperatura</td><td class="n" colspan="2">'+Math.round(x.cl.temp)+'°F'+(notaTemp?' ('+notaTemp+' al total)':'')+'</td></tr>';
     o+='<tr><td>Viento</td><td class="n" colspan="2">'+Math.round(x.cl.viento)+' mph del '+rumbo(x.cl.dir)+'</td></tr>';
@@ -335,6 +367,7 @@ function contexto(x,pfv,Tbase,T,notaTemp){
     o+='<tr><td>Clima</td><td class="n" colspan="2">no disponible</td></tr>';
   }
   o+='<tr><td>Total: crudo → ajustado</td><td class="n" colspan="2">'+num(Tbase,1)+' → '+num(T,1)+'</td></tr>';
+  if(!PARK[x.venueId]) o+='<tr><td>Aviso</td><td class="n" colspan="2">parque no está en la tabla — sin ajuste</td></tr>';
   o+='</table>';
   if(x.cl&&x.cl.viento>=12) o+='<div class="flag">Viento de '+Math.round(x.cl.viento)+' mph. No lo meto en el cálculo porque haría falta saber hacia dónde apunta el jardín central de este parque, y ese dato no lo tengo confiable. Míralo tú: soplando hacia los jardines empuja el total para arriba, hacia el plato lo baja.</div>';
   return o;
@@ -390,15 +423,17 @@ function fila(g,year){
     if(!pa||!ph){ body.innerHTML='<div class="status err">Todavía no hay abridores confirmados. Vuelve más tarde o métele los números a mano abajo.</div>'; return; }
     var v=g.venue||{};
     var loc=v.location&&v.location.defaultCoordinates;
-    var techo=(v.fieldInfo&&v.fieldInfo.roofType)||'';
-    var cerrado=/dome|indoor/i.test(techo);
+    var pkinfo=PARK[v.id]||null;
+    var techo=pkinfo?pkinfo[2]:((v.fieldInfo&&v.fieldInfo.roofType)||'');
+    var cerrado=(techo==='techo')||/dome|indoor/i.test(techo);
     var pw=(loc&&!cerrado)?clima(loc.latitude,loc.longitude,new Date(g.gameDate).getTime()):Promise.resolve(null);
     Promise.all([ultimas5(pa.id,year),ultimas5(ph.id,year),temporada(pa.id,year),temporada(ph.id,year),
       ofensiva(a.team.id,year),ofensiva(h.team.id,year),bullpen(a.team.id,year),bullpen(h.team.id,year),
       kLiga(year),ligaEra(year),pw])
     .then(function(r){
       el._d={a:a,h:h,pa:pa,ph:ph,l5a:r[0],l5h:r[1],sea:r[2],seh:r[3],oa:r[4],oh:r[5],ba:r[6],bh:r[7],
-             cl:r[10], venue:(v.name||''), techo:techo, cerrado:cerrado};
+             cl:r[10], venue:(pkinfo?pkinfo[0]:(v.name||'')), venueId:v.id,
+             techo:techo, cerrado:cerrado};
       pintar(el);
     }).catch(function(e){
       body.innerHTML='<div class="status err">Falló la carga ('+esc(e.message)+'). Usa el cálculo a mano.</div>';
@@ -433,18 +468,18 @@ function detalle(x){
   var permA=(eA*6/9 + ba.era*3/9)*1.08;
   var crudoA=(oa.rg+permH)/2, crudoH=(oh.rg+permA)/2;
   var T=crudoA+crudoH;
-  var abrH=h.team.abbreviation||'';
-  var pfv=(PARK[abrH]!=null)?PARK[abrH]:100;
-  var fParque=pfv/100;
+  var pk=PARK[x.venueId]||null;
+  var pfv=pk?pk[1]:1.00;
   var fTemp=1, notaTemp='';
   if(x.cl&&x.cl.temp!=null){
-    var dT=(x.cl.temp-70)/10*0.015;
-    if(dT>0.05) dT=0.05; if(dT<-0.05) dT=-0.05;
-    fTemp=1+dT;
-    notaTemp=(dT>=0?'+':'')+(dT*100).toFixed(1)+'%';
+    var t=x.cl.temp;
+    if(t>=90) fTemp=1.05; else if(t>=80) fTemp=1.02; else if(t<=55) fTemp=0.96;
+    if(fTemp!==1) notaTemp=((fTemp-1)>=0?'+':'')+((fTemp-1)*100).toFixed(1)+'%';
   }
+  var bruto=pfv*fTemp;
+  var fSuave=1+(bruto-1)*SUAVE;
   var Tbase=T;
-  T=T*fParque*fTemp;
+  T=T*fSuave;
   var dEf=(r.pct-50)/17;
   var lamH=(T+dEf)/2, lamA=(T-dEf)/2;
   if(lamA<0.5){lamA=0.5;} if(lamH<0.5){lamH=0.5;}
