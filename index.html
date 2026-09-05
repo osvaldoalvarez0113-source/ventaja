@@ -363,7 +363,7 @@ function lineup(gamePk){
         var pl=eq.players&&eq.players['ID'+pid];
         return pl?pl.person.fullName:('#'+pid);
       });
-      o[l]={n:ord.length, nombres:nombres, ok:ord.length>=9};
+      o[l]={n:ord.length, ids:ord.slice(), nombres:nombres, ok:ord.length>=9};
     });
     return o;
   }).catch(function(){ return null; });
@@ -802,20 +802,25 @@ function conectar(root){
         var html='';
         [['away',btn.dataset.ha,ra],['home',btn.dataset.hh,rh]].forEach(function(t){
           var L=lu[t[0]];
-          if(!L.ok){ html+='<div class="flag"><b>'+esc(t[1])+'</b>: lineup sin confirmar todavía.</div>'; return; }
-          var fuera=[];
-          if(t[2]&&t[2].length){
-            var hoy={}; (L.nombres||[]).forEach(function(n){ hoy[n]=1; });
-            fuera=t[2].length? [] : [];
+          if(!L||!L.ok){
+            html+='<div class="flag"><b>'+esc(t[1])+'</b>: lineup sin confirmar todavía.</div>';
+            return;
           }
-          html+='<div class="flag"><b>'+esc(t[1])+'</b> — lineup confirmado: '+esc(L.nombres.join(', '))+'</div>';
+          var aviso='';
+          if(t[2]&&t[2].length){
+            var hoy={}; L.ids.forEach(function(id){ hoy[id]=1; });
+            var fuera=t[2].filter(function(id){ return !hoy[id]; }).length;
+            aviso = fuera>0
+              ? ' <b>'+fuera+' titular(es) habitual(es) fuera del lineup hoy.</b>'
+              : ' Lineup completo, sin titulares descansando.';
+          }else{
+            aviso=' No hay suficientes juegos recientes para saber quién es titular habitual.';
+          }
+          html+='<div class="flag"><b>'+esc(t[1])+'</b> — '+esc(L.nombres.join(', '))+'.'+aviso+'</div>';
         });
-        /* regulares fuera: comparar ids del lineup contra los habituales */
-        Promise.resolve().then(function(){
-          out.className='out';
-          out.innerHTML=html;
-          btn.textContent='Lineups cargados';
-        });
+        out.className='out';
+        out.innerHTML=html;
+        btn.textContent='Lineups cargados';
       }).catch(function(){
         out.className='out no'; out.textContent='Falló la búsqueda de lineups.'; btn.disabled=false;
       });
