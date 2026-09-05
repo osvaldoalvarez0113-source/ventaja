@@ -143,6 +143,14 @@ footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
 </div>
 
 <div class="modo">
+  <label for="plata">Dónde apuestas:</label>
+  <select id="plata">
+    <option value="book" selected>Sportsbook — cuota americana (−155)</option>
+    <option value="kalshi">Kalshi — precio del contrato (58¢)</option>
+  </select>
+</div>
+
+<div class="modo">
   <label for="banca">Banca (opcional, para el ¼ de Kelly):</label>
   <input type="number" id="banca" placeholder="1000" style="width:110px">
 </div>
@@ -205,6 +213,14 @@ footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
   trae el signo menos, y sin él no se puede escribir −155. Se aceptan también el guion largo y el
   menos tipográfico que mete el corrector. Los boxscores se piden recortados con ?fields= para no
   bajar cientos de KB por juego; si el filtro viniera vacío se recae al boxscore completo.
+  El selector de arriba cambia cómo se leen los precios. En modo <b>Kalshi</b> escribes el contrato
+  en centavos tal como lo ves (58 = 58¢ = 58%), no hace falta convertir nada: en un mercado de
+  predicción el precio ya es la probabilidad. Kalshi no cobra vigorish, pero sí comisión por
+  operación, 0.07 × precio × (1 − precio) por contrato, que sobre lo que arriesgas sale al
+  0.07 × (1 − precio) — en un contrato de 50¢ son 3.5 puntos, suficiente para borrar una ventaja de
+  3. Esa comisión se resta entera del EV y del Kelly porque se paga ganes, pierdas o empates.
+  Cada pick guardado recuerda en qué plataforma lo tomaste, así que el CLV y las unidades se
+  calculan con las reglas correctas aunque mezcles los dos.
   Los picks se guardan solo en este teléfono, sin cuenta ni servidor; si borras los datos del
   navegador se van, por eso está el botón de respaldo. El CLV compara el implícito de la cuota que
   tomaste contra el implícito de la cuota de cierre del mismo lado: si cerró más corta que la tuya,
@@ -242,6 +258,12 @@ var LIGA_ERA=null;
 var LIGA_RG=null;
 var STAND=null;
 var LIGA_YEAR=null;   /* los promedios de liga son de un ano concreto */
+var PLATA='book';     /* book = cuota americana | kalshi = precio del contrato */
+var LIMPIAR=false;    /* al cambiar de plataforma las cuotas viejas no sirven */
+/* Kalshi cobra 0.07 x C x P x (1-P) por contrato al entrar. Como lo que pones por
+   contrato es P, la comision sale al 0.07 x (1-P) de lo que arriesgas. En un
+   contrato de 50c son 3.5 puntos: se come una ventaja de 3 puntos entera. */
+var KFEE=0.07;
 var MULT=13;
 var EXTRAS=0.18;  /* carreras que aportan los innings extra */
 /* Park factors por venue_id — misma tabla que contexto_juego.py de Betbot.
@@ -319,16 +341,17 @@ function decimal(am){ return am>0 ? am/100 : 100/(-am); }
 /* pushPct: probabilidad de empate en la linea (solo en lineas enteras: total 8.0,
    ponches 5.0). El empate devuelve el dinero, no lo pierde — tratarlo como derrota
    subestima el valor del Under. */
-function valor(pPct,amStr,pushPct){
-  var am=numOdds(amStr);
-  if(!isFinite(am)||am===0) return null;
-  var imp=implied(am); if(imp==null) return null;
-  var p=pPct/100, b=decimal(am), push=(pushPct||0)/100;
+function valor(pPct,amStr,pushPct,plat){
+  var imp=impMod(amStr,plat); if(imp==null) return null;
+  var pg=pagoMod(amStr,plat); if(!pg) return null;
+  var p=pPct/100, push=(pushPct||0)/100;
   var q=Math.max(0,1-p-push);        /* pierde de verdad */
-  var ev=p*b-q;                      /* por cada dolar apostado */
-  var f=b>0?(p*b-q)/b:0;             /* Kelly completo, con push */
+  /* La comision se paga entres o no: gane, pierda o empate. Por eso resta entera. */
+  var ev=p*pg.b-q-pg.fee;            /* por cada dolar arriesgado */
+  var bn=pg.b-pg.fee, ln=1+pg.fee;
+  var f=bn>0?(p*bn-q*ln)/bn:0;       /* Kelly completo, con push y comision */
   var bk=banca();
-  return {imp:imp, ventaja:(p-imp/100)*100, ev:ev, kelly:f, push:push*100,
+  return {imp:imp, ventaja:(p-imp/100)*100, ev:ev, kelly:f, push:push*100, fee:pg.fee*100,
           stake: (bk&&f>0)? bk*f*0.25 : null};   /* cuarto de Kelly, como Betbot */
 }
 function txtValor(etiqueta,pPct,amStr,pushPct){
@@ -342,7 +365,7 @@ function txtValor(etiqueta,pPct,amStr,pushPct){
 /* Quita el vigorish: la suma de los dos implicitos pasa de 103% a 100%.
    Sin esto comparas tu numero contra un porcentaje inflado por la comision. */
 function devig(amA,amH){
-  var ia=implied(amA), ih=implied(amH);
+  var ia=impMod(amA), ih=impMod(amH);
   if(ia==null||ih==null) return null;
   var s=ia+ih;
   if(s<=0) return null;
@@ -359,6 +382,32 @@ function numOdds(v){
     .replace(/[\uFF0B]/g,'+')
     .replace(/[\s,]/g,''));
 }
+/* Acepta 58, 58c o 0.58 y devuelve 0.58. */
+function precioK(v){
+  var c=numOdds(v);
+  if(!isFinite(c)) return null;
+  if(c>=1&&c<100) c=c/100;
+  return (c>0&&c<1)?c:null;
+}
+/* Probabilidad implicita segun la plataforma. En Kalshi el precio ES la probabilidad. */
+function impMod(v,plat){
+  if((plat||PLATA)==='kalshi'){ var c=precioK(v); return c==null?null:c*100; }
+  return implied(v);
+}
+/* Ganancia por cada dolar arriesgado, y comision como fraccion de lo arriesgado. */
+function pagoMod(v,plat){
+  if((plat||PLATA)==='kalshi'){
+    var c=precioK(v); if(c==null) return null;
+    return {b:(1-c)/c, fee:KFEE*(1-c)};
+  }
+  var am=numOdds(v);
+  if(!isFinite(am)||am===0) return null;
+  return {b:decimal(am), fee:0};
+}
+function fmtOdds(v,plat){
+  return ((plat||PLATA)==='kalshi') ? (Math.round(precioK(v)*100)+'¢') : String(v);
+}
+function ph(book,kal){ return PLATA==='kalshi'?kal:book; }
 function implied(v){
   var n=numOdds(v);
   if(!isFinite(n)||n===0) return null;
@@ -904,14 +953,16 @@ function regDel(id){
    Los dos numeros llevan la comision adentro, asi que casi toda se cancela al restar. */
 function clvPts(p){
   if(p.cierre==null||p.cierre==='') return null;
-  var a=implied(p.am), b=implied(p.cierre);
+  var a=impMod(p.am,p.plat), b=impMod(p.cierre,p.plat);
   if(a==null||b==null) return null;
   return b-a;
 }
 function unidades(p){
-  if(p.res==='E') return 0;
-  if(p.res==='G') return decimal(numOdds(p.am));
-  if(p.res==='P') return -1;
+  var pg=pagoMod(p.am,p.plat);
+  var fee=pg?pg.fee:0;
+  if(p.res==='E') return -fee;                 /* empate: vuelve el dinero, la comision no */
+  if(p.res==='G') return pg?pg.b-fee:null;
+  if(p.res==='P') return -(1+fee);
   return null;
 }
 function resumenReg(a){
@@ -979,11 +1030,11 @@ function pintarRegistro(){
     abiertos.forEach(function(p){
       var c=clvPts(p);
       h+='<div class="pk" data-id="'+p.id+'">'+
-         '<div class="t">'+esc(p.m)+' '+esc(String(p.am))+'</div>'+
+         '<div class="t">'+esc(p.m)+' '+esc(fmtOdds(p.am,p.plat))+'</div>'+
          '<div class="s">'+esc(p.juego)+' · '+esc(p.f)+' · tu número '+p.p.toFixed(1)+'%'+
          (c!=null?' · CLV '+(c>0?'+':'')+c.toFixed(1)+' pts':'')+'</div>'+
          '<div class="acc">'+
-           '<label>Cierre</label><input type="text" class="cie" value="'+(p.cierre==null?'':esc(String(p.cierre)))+'" placeholder="-175">'+
+           '<label>Cierre</label><input type="text" class="cie" value="'+(p.cierre==null?'':esc(String(p.cierre)))+'" placeholder="'+(p.plat==='kalshi'?'64':'-175')+'">'+
            '<button class="rG">Ganó</button>'+
            '<button class="ghost rP">Perdió</button>'+
            '<button class="ghost rE">Empate</button>'+
@@ -996,7 +1047,7 @@ function pintarRegistro(){
     cerrados.forEach(function(p){
       var c=clvPts(p), u=unidades(p);
       h+='<div class="pk" data-id="'+p.id+'">'+
-         '<div class="t">'+esc(p.m)+' '+esc(String(p.am))+
+         '<div class="t">'+esc(p.m)+' '+esc(fmtOdds(p.am,p.plat))+
            ' <span class="res '+(p.res==='G'?'g':p.res==='P'?'p':'')+'">'+
            (p.res==='G'?'ganó':p.res==='P'?'perdió':'empate')+'</span></div>'+
          '<div class="s">'+esc(p.juego)+' · '+esc(p.f)+' · dijiste '+p.p.toFixed(1)+'%'+
@@ -1083,9 +1134,11 @@ function actualizarRanking(root){
   buenos.forEach(function(m,i){
     var nv=nivel(m.v.ventaja,m.v.ev);
     var medalla=['🥇','🥈','🥉'][i]||(i+1)+'.';
-    o+='<div class="pick '+nv.c+'"><div class="q">'+medalla+' '+esc(m.m)+' '+esc(String(m.am))+'</div>'+
-       '<div class="r">'+nv.t+' · tú '+m.p.toFixed(1)+'% contra '+m.v.imp.toFixed(1)+'% del book · '+
+    o+='<div class="pick '+nv.c+'"><div class="q">'+medalla+' '+esc(m.m)+' '+esc(fmtOdds(m.am))+'</div>'+
+       '<div class="r">'+nv.t+' · tú '+m.p.toFixed(1)+'% contra '+m.v.imp.toFixed(1)+
+       (PLATA==='kalshi'?'% del contrato · ':'% del book · ')+
        '+'+m.v.ventaja.toFixed(1)+' puntos · EV +'+(m.v.ev*100).toFixed(1)+'% por dólar'+
+       (m.v.fee>0.05?' (ya con '+m.v.fee.toFixed(1)+'% de comisión)':'')+
        (m.v.stake?' · ¼ Kelly $'+m.v.stake.toFixed(2):'')+
        (m.push>0.5?' · empata en la línea '+m.push.toFixed(1)+'% de las veces':'')+
        '</div>'+
@@ -1104,13 +1157,13 @@ function actualizarRanking(root){
   caja.innerHTML=o;
   var juego=caja.dataset.juego||'—', fecha=caja.dataset.fecha||hoyISO();
   caja.querySelectorAll('button.gp').forEach(function(b){
-    var base={f:fecha, juego:juego, m:b.dataset.m, p:+b.dataset.p, am:b.dataset.am};
+    var base={f:fecha, juego:juego, m:b.dataset.m, p:+b.dataset.p, am:b.dataset.am, plat:PLATA};
     /* Si ya esta en el registro, el boton nace marcado: repintar la tarjeta
        (cambiar banca, multiplicador o modo) no puede duplicar un pick. */
     if(regExiste(base)){ b.textContent='Ya guardado ✓'; b.disabled=true; return; }
     b.addEventListener('click',function(){
       var id=regAdd({f:base.f, juego:base.juego, m:base.m, p:base.p,
-                     am:base.am, cierre:null, res:null});
+                     am:base.am, plat:base.plat, cierre:null, res:null});
       if(id){ b.textContent='Guardado ✓'; b.disabled=true; pintarRegistro(); }
       else if(regExiste(base)){ b.textContent='Ya guardado ✓'; b.disabled=true; }
       else { b.textContent='No se pudo guardar'; }
@@ -1156,14 +1209,18 @@ function veredictoEV(pA,pH,amA,amH,nomA,nomH,vc){
   var o='<div class="pick '+cls+'"><div class="q">'+esc(tit)+'</div><div class="r">'+esc(det)+'</div></div>';
   o+='<table>'+
      '<tr><th></th><th>'+nomA+'</th><th>'+nomH+'</th></tr>'+
-     '<tr><td>El book paga (con vig)</td><td class="n">'+lados[0].imp.toFixed(1)+'%</td><td class="n">'+lados[1].imp.toFixed(1)+'%</td></tr>'+
-     '<tr><td>El mercado cree (sin vig)</td><td class="n">'+lados[0].fair.toFixed(1)+'%</td><td class="n">'+lados[1].fair.toFixed(1)+'%</td></tr>'+
+     '<tr><td>'+(PLATA==='kalshi'?'Precio del contrato':'El book paga (con vig)')+'</td><td class="n">'+lados[0].imp.toFixed(1)+'%</td><td class="n">'+lados[1].imp.toFixed(1)+'%</td></tr>'+
+     '<tr><td>'+(PLATA==='kalshi'?'Normalizado a 100':'El mercado cree (sin vig)')+'</td><td class="n">'+lados[0].fair.toFixed(1)+'%</td><td class="n">'+lados[1].fair.toFixed(1)+'%</td></tr>'+
      '<tr class="usa"><td>Tu número</td><td class="n">'+pA.toFixed(1)+'%</td><td class="n">'+pH.toFixed(1)+'%</td></tr>'+
      '<tr><td>Tú menos el mercado</td><td class="n">'+(lados[0].dif>=0?'+':'')+lados[0].dif.toFixed(1)+'</td><td class="n">'+(lados[1].dif>=0?'+':'')+lados[1].dif.toFixed(1)+'</td></tr>'+
      '</table>';
-  o+='<div class="flag">La casa cobra '+dv.vig.toFixed(1)+
-     ' puntos de comisión en este mercado. La fila "sin vig" es lo que el mercado de verdad cree; '+
-     'la de arriba viene inflada y no sirve para medirte.</div>';
+  o+= (PLATA==='kalshi')
+    ? '<div class="flag">Kalshi no cobra vigorish: los dos lados suman '+dv.sum.toFixed(1)+
+      ' y lo que sobre es el diferencial entre compra y venta. Lo que sí cobra es comisión por '+
+      'operación, y esa ya va descontada del EV y del stake.</div>'
+    : '<div class="flag">La casa cobra '+dv.vig.toFixed(1)+
+      ' puntos de comisión en este mercado. La fila "sin vig" es lo que el mercado de verdad cree; '+
+      'la de arriba viene inflada y no sirve para medirte.</div>';
   var sep=Math.abs(best.dif);
   if(sep>=8) o+='<div class="flag">⚠️ Te separas '+sep.toFixed(1)+' puntos del mercado en ese lado. '+
      'Una diferencia así casi siempre significa que al modelo le falta un dato que el mercado ya tiene — '+
@@ -1284,7 +1341,7 @@ function pintar(el){
   /* Guardar las cuotas ya tecleadas: cambiar la banca o el multiplicador
      repinta la tarjeta y antes las borraba. */
   var prev=[];
-  body.querySelectorAll('input').forEach(function(i){ prev.push(i.value); });
+  if(!LIMPIAR) body.querySelectorAll('input').forEach(function(i){ prev.push(i.value); });
   body.innerHTML=detalle(el._d);
   var ahora=body.querySelectorAll('input');
   if(prev.length===ahora.length)
@@ -1452,8 +1509,8 @@ function detalle(x){
     brecha.toFixed(1)+' puntos. Los dos no pueden tener razón a la vez: si juegas el hándicap en este partido, hazlo con medio stake.</div>':'')+
   '<div class="row" data-hc="1" data-pf="'+(favPor2*100).toFixed(3)+'" data-pd="'+(dogMas15*100).toFixed(3)+
     '" data-nf="'+abrGana+'" data-nd="'+abrPierde+'">'+
-    '<label>'+abrGana+' −1.5</label><input type="text" class="hf" placeholder="+175">'+
-    '<label>'+abrPierde+' +1.5</label><input type="text" class="hd" placeholder="-175">'+
+    '<label>'+abrGana+' −1.5</label><input type="text" class="hf" placeholder="'+ph('+175','36')+'">'+
+    '<label>'+abrPierde+' +1.5</label><input type="text" class="hd" placeholder="'+ph('-175','64')+'">'+
     '<div class="out"></div></div>'+
   '<div class="flag">Recuerda tu equivalencia de Kalshi: el +1.5 del underdog es el "No" al contrato de que el favorito gana por más de 1.5.</div>'+
   '<div class="flag">Si el favorito es el local, este número viene algo optimista: el local no batea el noveno cuando va ganando, así que gana por 2+ menos seguido de lo que dice un modelo de nueve innings completos.</div>'+
@@ -1465,8 +1522,8 @@ function detalle(x){
   '<div class="flag">Total esperado: <b>'+num(T,1)+' carreras</b> (crudo '+num(Tbase,1)+', ajustado por parque, temperatura e innings extra).</div>'+
   '<div class="row" data-tot="'+T.toFixed(3)+'">'+
     '<label>Línea</label><input type="number" inputmode="decimal" step="0.5" class="tl" placeholder="8.5">'+
-    '<label>Over</label><input type="text" class="to" placeholder="-110">'+
-    '<label>Under</label><input type="text" class="tu" placeholder="-110">'+
+    '<label>Over</label><input type="text" class="to" placeholder="'+ph('-110','52')+'">'+
+    '<label>Under</label><input type="text" class="tu" placeholder="'+ph('-110','52')+'">'+
     '<div class="out"></div></div>'+
 
   '<h3>Ponches del abridor</h3>'+
@@ -1477,10 +1534,13 @@ function detalle(x){
   desglose(r,nomA,nomH)+
   (avisos.length?'<div class="flag">'+avisos.map(esc).join(' ')+'</div>':'')+
 
-  '<h3>Compara con el book</h3>'+
+  '<h3>'+(PLATA==='kalshi'?'Compara con Kalshi':'Compara con el book')+'</h3>'+
+  '<div class="flag">'+(PLATA==='kalshi'
+    ?'Mete el precio del contrato en centavos tal como lo ves en Kalshi: 58 es 58¢, o sea 58%. La comisión ya va descontada del EV.'
+    :'Mete la cuota americana de cada lado. Con las dos se le puede quitar la comisión al mercado.')+'</div>'+
   '<div class="row cmp" data-pa="'+pA+'" data-ph="'+pH+'" data-na="'+nomA+'" data-nh="'+nomH+'" data-vc="'+vc.toFixed(3)+'" data-cap="'+(r.capped?1:0)+'">'+
-    '<label>'+nomA+'</label><input type="text" class="ca" placeholder="+135">'+
-    '<label>'+nomH+'</label><input type="text" class="ch" placeholder="-155">'+
+    '<label>'+nomA+'</label><input type="text" class="ca" placeholder="'+ph('+135','44')+'">'+
+    '<label>'+nomH+'</label><input type="text" class="ch" placeholder="'+ph('-155','58')+'">'+
     '<div class="out"></div></div>'+
   '<div class="devig"></div>';
   return out;
@@ -1507,8 +1567,8 @@ function kBloque(nombre,se,rival,abrRival,l5){
     '<div class="row" data-k="'+lam.toFixed(3)+'" data-n="'+esc(nombre)+'">'+
       '<label>K esperados: '+num(lam,1)+' — línea</label>'+
       '<input type="number" inputmode="decimal" step="0.5" class="kl" placeholder="5.5">'+
-      '<label>Over</label><input type="text" class="ko" placeholder="-120">'+
-      '<label>Under</label><input type="text" class="ku" placeholder="+100">'+
+      '<label>Over</label><input type="text" class="ko" placeholder="'+ph('-120','55')+'">'+
+      '<label>Under</label><input type="text" class="ku" placeholder="'+ph('+100','48')+'">'+
       '<div class="out"></div></div>';
 }
 
@@ -1693,8 +1753,8 @@ $('calcular').addEventListener('click',function(){
     '<tr><td>Cuota justa</td><td class="n">'+american(pA)+'</td><td class="n">'+american(pH)+'</td></tr></table>'+
     (r.capped?'<div class="flag">El porcentaje crudo pasó del límite y quedó recortado.</div>':'')+
     '<div class="row cmp" data-pa="'+pA+'" data-ph="'+pH+'" data-na="Visita" data-nh="Local" data-vc="'+vc.toFixed(3)+'">'+
-      '<label>Visita</label><input type="text" class="ca" placeholder="+135">'+
-      '<label>Local</label><input type="text" class="ch" placeholder="-155">'+
+      '<label>Visita</label><input type="text" class="ca" placeholder="'+ph('+135','44')+'">'+
+      '<label>Local</label><input type="text" class="ch" placeholder="'+ph('-155','58')+'">'+
       '<div class="out"></div></div>'+
     '<div class="devig"></div>';
   conectar($('manual_out'));
@@ -1709,6 +1769,15 @@ $('modo').addEventListener('change',function(){
   MODO=this.value;
   var gs=document.querySelectorAll('.game');
   for(var i=0;i<gs.length;i++){ if(gs[i]._d) pintar(gs[i]); }
+});
+$('plata').addEventListener('change',function(){
+  PLATA=this.value;
+  LIMPIAR=true;              /* una cuota americana no significa nada en centavos */
+  var gs=document.querySelectorAll('.game');
+  for(var i=0;i<gs.length;i++){ if(gs[i]._d) pintar(gs[i]); }
+  LIMPIAR=false;
+  $('manual_out').innerHTML='';
+  pintarRegistro();
 });
 $('off').addEventListener('change',function(){
   OFF=this.value;
