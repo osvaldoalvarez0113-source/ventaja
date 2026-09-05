@@ -126,14 +126,17 @@ footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
   salen de una distribución de Poisson montada sobre esas mismas carreras esperadas, así que los cuatro
   mercados cuentan la misma historia. El total usa la misma tabla de park factors y la misma amortiguación al 60% que contexto_juego.py de Betbot,
   más la temperatura real de Open-Meteo a la hora del juego. El viento se muestra pero no se calcula: hace falta
-  la orientación del jardín central de cada parque y ese dato no existe todavía en ningún lado. FIP = (13·HR + 3·(BB+HBP) − 2·K) ÷ IP + 3.15. Los ERA se ajustan por tamaño de muestra: un pitcher con pocos innings se jala hacia el promedio de la liga, para que una sola salida mala no rompa el cálculo.
+  la orientación del jardín central de cada parque y ese dato no existe todavía en ningún lado.
+  Los splits L/R escalan las carreras por juego con tope de ±10%. El bullpen quemado usa los mismos
+  escalones que ajustar_ml() de Betbot: −2 puntos si dos o más relevistas lanzaron dos días seguidos,
+  −1 si fue uno, o si tres o más lanzaron ayer. FIP = (13·HR + 3·(BB+HBP) − 2·K) ÷ IP + 3.15. Los ERA se ajustan por tamaño de muestra: un pitcher con pocos innings se jala hacia el promedio de la liga, para que una sola salida mala no rompa el cálculo.
 </footer>
 
 </div>
 
 <script>
 var API='https://statsapi.mlb.com/api/v1';
-var cache={hit:{},pen:{},log:{},sea:{}};
+var cache={hit:{},pen:{},log:{},sea:{},mano:{},split:{},quem:{},reg:{}};
 var MODO='mix';
 var K_LIGA=null;
 var LIGA_ERA=null;
@@ -258,7 +261,8 @@ function ofensiva(teamId,year){
     var st=s?s.stat:{};
     var g=+(st.gamesPlayed||0), r=+(st.runs||0);
     var pa=+(st.plateAppearances||0), so=+(st.strikeOuts||0);
-    var out={rg: g>0?r/g:null, g:g, kpct: pa>0?so/pa:null};
+    var out={rg: g>0?r/g:null, g:g, kpct: pa>0?so/pa:null,
+             ops: st.ops!=null?parseFloat(st.ops):null};
     cache.hit[k]=out; return out;
   });
 }
@@ -288,6 +292,115 @@ function ligaEra(year){
     LIGA_ERA = ip>0 ? er*9/ip : 4.10;
     return LIGA_ERA;
   }).catch(function(){ LIGA_ERA=4.10; return LIGA_ERA; });
+}
+function mano(id){
+  if(cache.mano[id]) return Promise.resolve(cache.mano[id]);
+  return j(API+'/people/'+id).then(function(d){
+    var p=d.people&&d.people[0];
+    var m=(p&&p.pitchHand&&p.pitchHand.code)||null;
+    cache.mano[id]=m; return m;
+  }).catch(function(){ return null; });
+}
+function splitEquipo(teamId,m,year){
+  if(!m) return Promise.resolve(null);
+  var k=teamId+'-'+m+'-'+year;
+  if(cache.split[k]!==undefined) return Promise.resolve(cache.split[k]);
+  var sit=(m==='L')?'vl':'vr';
+  return j(API+'/teams/'+teamId+'/stats?stats=statSplits&sitCodes='+sit+
+           '&group=hitting&season='+year+'&sportIds=1&gameType=R').then(function(d){
+    var sp=d.stats&&d.stats[0]&&d.stats[0].splits&&d.stats[0].splits[0];
+    var v=(sp&&sp.stat&&sp.stat.ops!=null)?parseFloat(sp.stat.ops):null;
+    cache.split[k]=v; return v;
+  }).catch(function(){ cache.split[k]=null; return null; });
+}
+function ymd(dt){ var p=function(n){return String(n).padStart(2,'0');};
+  return dt.getUTCFullYear()+'-'+p(dt.getUTCMonth()+1)+'-'+p(dt.getUTCDate()); }
+function quemados(teamId,baseDate){
+  var k=teamId+'-'+ymd(baseDate);
+  if(cache.quem[k]) return Promise.resolve(cache.quem[k]);
+  var dias=[1,2].map(function(n){
+    var d=new Date(baseDate.getTime()-n*86400000);
+    return {n:n, f:ymd(d)};
+  });
+  return Promise.all(dias.map(function(dd){
+    return j(API+'/schedule?sportId=1&teamId='+teamId+'&startDate='+dd.f+'&endDate='+dd.f)
+      .then(function(sc){
+        var gs=(sc.dates&&sc.dates[0]&&sc.dates[0].games)||[];
+        if(!gs.length) return [];
+        return Promise.all(gs.slice(0,2).map(function(g){
+          return j(API+'/game/'+g.gamePk+'/boxscore').then(function(b){
+            var out=[];
+            ['home','away'].forEach(function(l){
+              var eq=b.teams&&b.teams[l];
+              if(!eq||!eq.team||eq.team.id!==teamId) return;
+              var pl=eq.players||{};
+              for(var kk in pl){
+                var st=pl[kk].stats&&pl[kk].stats.pitching;
+                if(!st) continue;
+                if(st.inningsPitched==null||st.inningsPitched==='0.0') continue;
+                if(+(st.gamesStarted||0)!==0) continue;
+                out.push(pl[kk].person.fullName);
+              }
+            });
+            return out;
+          }).catch(function(){ return []; });
+        })).then(function(arrs){ return [].concat.apply([],arrs); });
+      }).catch(function(){ return []; });
+  })).then(function(r){
+    var ayer=r[0]||[], antes=r[1]||[];
+    var seg=ayer.filter(function(n){ return antes.indexOf(n)>=0; });
+    var out={ayer:ayer, seguidos:seg};
+    cache.quem[k]=out; return out;
+  }).catch(function(){ return {ayer:[],seguidos:[]}; });
+}
+function lineup(gamePk){
+  return j(API+'/game/'+gamePk+'/boxscore').then(function(b){
+    var o={};
+    ['home','away'].forEach(function(l){
+      var eq=b.teams&&b.teams[l];
+      var ord=(eq&&eq.battingOrder)||[];
+      var nombres=ord.map(function(pid){
+        var pl=eq.players&&eq.players['ID'+pid];
+        return pl?pl.person.fullName:('#'+pid);
+      });
+      o[l]={n:ord.length, nombres:nombres, ok:ord.length>=9};
+    });
+    return o;
+  }).catch(function(){ return null; });
+}
+function regulares(teamId,baseDate){
+  /* Titulares habituales: frecuencia en los ultimos 5 juegos finalizados */
+  var k=teamId+'-'+ymd(baseDate);
+  if(cache.reg[k]) return Promise.resolve(cache.reg[k]);
+  var ini=ymd(new Date(baseDate.getTime()-8*86400000));
+  var fin=ymd(new Date(baseDate.getTime()-86400000));
+  return j(API+'/schedule?sportId=1&teamId='+teamId+'&startDate='+ini+'&endDate='+fin)
+   .then(function(sc){
+     var gs=[];
+     (sc.dates||[]).forEach(function(d){ (d.games||[]).forEach(function(g){
+       if(g.status&&g.status.abstractGameState==='Final') gs.push(g.gamePk);
+     });});
+     gs=gs.slice(-5);
+     if(gs.length<3){ cache.reg[k]=null; return null; }
+     return Promise.all(gs.map(function(pk){
+       return j(API+'/game/'+pk+'/boxscore').then(function(b){
+         var o=[];
+         ['home','away'].forEach(function(l){
+           var eq=b.teams&&b.teams[l];
+           if(!eq||!eq.team||eq.team.id!==teamId) return;
+           o=(eq.battingOrder||[]).slice();
+         });
+         return o;
+       }).catch(function(){ return []; });
+     })).then(function(lists){
+       var f={}, n=0;
+       lists.forEach(function(L){ if(L.length){ n++; L.forEach(function(pid){ f[pid]=(f[pid]||0)+1; }); } });
+       if(n<3){ cache.reg[k]=null; return null; }
+       var regs=[];
+       for(var pid in f){ if(f[pid]/n>=0.7) regs.push(+pid); }
+       cache.reg[k]=regs; return regs;
+     });
+   }).catch(function(){ return null; });
 }
 function rumbo(g){
   var n=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
@@ -352,6 +465,28 @@ function suerte(nombre,se){
   if(d>=0.50) return '<div class="flag"><b>'+esc(nombre)+'</b>: FIP '+num(se.fip)+' contra ERA '+num(se.era)+'. Está pitcheando peor de lo que dice su ERA — le ha ayudado la defensa o la suerte, y eso se corrige.</div>';
   if(d<=-0.50) return '<div class="flag"><b>'+esc(nombre)+'</b>: FIP '+num(se.fip)+' contra ERA '+num(se.era)+'. Está pitcheando mejor de lo que dice su ERA.</div>';
   return '';
+}
+function manoTxt(m){ return m==='L'?'zurdo':m==='R'?'derecho':'—'; }
+function manosBloque(x,fA,fH,nomA,nomH){
+  var o='<table>';
+  o+='<tr><td>Abridor visita</td><td class="n" colspan="2">'+esc(x.pa.fullName)+' ('+manoTxt(x.manoA)+')</td></tr>';
+  o+='<tr><td>Abridor local</td><td class="n" colspan="2">'+esc(x.ph.fullName)+' ('+manoTxt(x.manoH)+')</td></tr>';
+  o+='</table>';
+  var t='';
+  if(x.splitA!=null&&x.oa&&x.oa.ops) t+='<div class="flag"><b>'+nomA+'</b> batea '+num(x.splitA,3)+' de OPS contra '+manoTxt(x.manoH)+'s, contra '+num(x.oa.ops,3)+' en general → sus carreras se ajustan ×'+num(fA,2)+'.</div>';
+  if(x.splitH!=null&&x.oh&&x.oh.ops) t+='<div class="flag"><b>'+nomH+'</b> batea '+num(x.splitH,3)+' de OPS contra '+manoTxt(x.manoA)+'s, contra '+num(x.oh.ops,3)+' en general → sus carreras se ajustan ×'+num(fH,2)+'.</div>';
+  if(!t) t='<div class="flag">No hay splits disponibles para este juego; las carreras por juego van sin ajustar.</div>';
+  return o+t;
+}
+function quemBloque(q,nom){
+  if(!q) return '';
+  if(q.seguidos.length)
+    return '<div class="flag">🔥 Bullpen de <b>'+nom+'</b>: '+esc(q.seguidos.join(', '))+' lanzaron dos días seguidos. Probablemente no estén disponibles hoy o lleguen cansados.</div>';
+  if(q.ayer.length>=3)
+    return '<div class="flag">Bullpen de <b>'+nom+'</b>: '+q.ayer.length+' relevistas lanzaron ayer ('+esc(q.ayer.slice(0,4).join(', '))+'). Uso pesado reciente.</div>';
+  if(q.ayer.length)
+    return '<div class="flag">Bullpen de <b>'+nom+'</b>: descansado, solo '+q.ayer.length+' relevista(s) lanzaron ayer.</div>';
+  return '<div class="flag">Bullpen de <b>'+nom+'</b>: descansado, nadie lanzó ayer.</div>';
 }
 function contexto(x,pfv,Tbase,T,notaTemp){
   var o='<table>';
@@ -427,14 +562,22 @@ function fila(g,year){
     var techo=pkinfo?pkinfo[2]:((v.fieldInfo&&v.fieldInfo.roofType)||'');
     var cerrado=(techo==='techo')||/dome|indoor/i.test(techo);
     var pw=(loc&&!cerrado)?clima(loc.latitude,loc.longitude,new Date(g.gameDate).getTime()):Promise.resolve(null);
+    var fecha=new Date(g.gameDate);
     Promise.all([ultimas5(pa.id,year),ultimas5(ph.id,year),temporada(pa.id,year),temporada(ph.id,year),
       ofensiva(a.team.id,year),ofensiva(h.team.id,year),bullpen(a.team.id,year),bullpen(h.team.id,year),
-      kLiga(year),ligaEra(year),pw])
+      kLiga(year),ligaEra(year),pw,mano(pa.id),mano(ph.id),
+      quemados(a.team.id,fecha),quemados(h.team.id,fecha)])
     .then(function(r){
-      el._d={a:a,h:h,pa:pa,ph:ph,l5a:r[0],l5h:r[1],sea:r[2],seh:r[3],oa:r[4],oh:r[5],ba:r[6],bh:r[7],
-             cl:r[10], venue:(pkinfo?pkinfo[0]:(v.name||'')), venueId:v.id,
-             techo:techo, cerrado:cerrado};
-      pintar(el);
+      var mA=r[11], mH=r[12];
+      return Promise.all([splitEquipo(a.team.id,mH,year), splitEquipo(h.team.id,mA,year)])
+        .then(function(sp){
+          el._d={a:a,h:h,pa:pa,ph:ph,l5a:r[0],l5h:r[1],sea:r[2],seh:r[3],oa:r[4],oh:r[5],ba:r[6],bh:r[7],
+                 cl:r[10], venue:(pkinfo?pkinfo[0]:(v.name||'')), venueId:v.id,
+                 techo:techo, cerrado:cerrado,
+                 manoA:mA, manoH:mH, splitA:sp[0], splitH:sp[1],
+                 qa:r[13], qh:r[14], gamePk:g.gamePk, fecha:fecha, year:year};
+          pintar(el);
+        });
     }).catch(function(e){
       body.innerHTML='<div class="status err">Falló la carga ('+esc(e.message)+'). Usa el cálculo a mano.</div>';
     });
@@ -450,12 +593,37 @@ function pintar(el){
 
 function detalle(x){
   var a=x.a,h=x.h,pa=x.pa,ph=x.ph,l5a=x.l5a,l5h=x.l5h,sea=x.sea,seh=x.seh,oa=x.oa,oh=x.oh,ba=x.ba,bh=x.bh;
+  x.oa=oa; x.oh=oh;
   var eA=eraUsado(sea,l5a), eH=eraUsado(seh,l5h);
   var cA=eraCrudo(sea,l5a), cH=eraCrudo(seh,l5h);
   if(eA==null||eH==null||oa.rg==null||oh.rg==null||ba.era==null||bh.era==null)
     return '<div class="status err">Faltan datos de temporada para este juego. Métele los números a mano abajo.</div>';
 
-  var r=ventaja({eraA:eA,eraH:eH,rgA:oa.rg,rgH:oh.rg,bpA:ba.era,bpH:bh.era});
+  /* splits L/R: escala las carreras por juego segun como batea el equipo
+     contra la mano del abridor rival. Tope de +-10% para no sobreajustar. */
+  function fSplit(ops,total){
+    if(ops==null||total==null||total<=0) return 1;
+    var f=ops/total;
+    return Math.max(0.90,Math.min(1.10,f));
+  }
+  var fA=fSplit(x.splitA,oa.ops), fH=fSplit(x.splitH,oh.ops);
+  var rgA=oa.rg*fA, rgH=oh.rg*fH;
+
+  var r=ventaja({eraA:eA,eraH:eH,rgA:rgA,rgH:rgH,bpA:ba.era,bpH:bh.era});
+
+  /* bullpen quemado: mismos escalones que ajustar_ml() de Betbot */
+  function penal(q){
+    if(!q) return 0;
+    if(q.seguidos.length>=2) return 2.0;
+    if(q.seguidos.length>=1) return 1.0;
+    if(q.ayer.length>=3)     return 1.0;
+    return 0;
+  }
+  var penA=penal(x.qa), penH=penal(x.qh);
+  var pAjuste=penA-penH;
+  var pctFinal=Math.max(32,Math.min(68,r.pct+pAjuste));
+  r.pctBase=r.pct; r.penA=penA; r.penH=penH; r.pct=pctFinal;
+
   var pH=r.pct, pA=100-pH, homeLead=pH>=50;
   var nomA=esc(a.team.abbreviation||a.team.name), nomH=esc(h.team.abbreviation||h.team.name);
   var gana=homeLead?h.team.name:a.team.name;
@@ -515,11 +683,28 @@ function detalle(x){
   '<tr class="usa"><td>ERA usado ('+etiquetaModo()+', ajustado)</td><td class="n">'+num(eA)+'</td><td class="n">'+num(eH)+'</td></tr>'+
   '<tr><td>Innings de temporada</td><td class="n">'+num(sea.ip,1)+'</td><td class="n">'+num(seh.ip,1)+'</td></tr>'+
   '<tr><td>Carreras por juego</td><td class="n">'+num(oa.rg)+'</td><td class="n">'+num(oh.rg)+'</td></tr>'+
+  '<tr><td>OPS vs mano rival</td><td class="n">'+num(x.splitA,3)+'</td><td class="n">'+num(x.splitH,3)+'</td></tr>'+
+  '<tr class="usa"><td>Carreras por juego ajustadas</td><td class="n">'+num(rgA)+'</td><td class="n">'+num(rgH)+'</td></tr>'+
   '<tr><td>ERA bullpen'+((ba.aprox||bh.aprox)?' *':'')+'</td><td class="n">'+num(ba.era)+'</td><td class="n">'+num(bh.era)+'</td></tr>'+
   '<tr><td>Carreras esperadas hoy</td><td class="n">'+num(lamA,1)+'</td><td class="n">'+num(lamH,1)+'</td></tr>'+
   '<tr><td>Cuota justa al ganador</td><td class="n">'+american(pA)+'</td><td class="n">'+american(pH)+'</td></tr>'+
   '</table>'+
   suerte(pa.fullName,sea)+suerte(ph.fullName,seh)+ajuste(pa.fullName,cA,eA)+ajuste(ph.fullName,cH,eH)+
+
+  '<h3>Manos y bullpen</h3>'+
+  manosBloque(x,fA,fH,nomA,nomH)+
+  quemBloque(x.qa,nomA)+quemBloque(x.qh,nomH)+
+  ((penA||penH)?'<div class="flag">Ajuste por bullpen quemado: '+
+     (penH?nomH+' −'+penH.toFixed(1)+' puntos':'')+((penH&&penA)?' · ':'')+
+     (penA?nomA+' −'+penA.toFixed(1)+' puntos':'')+
+     '. La fórmula daba '+r.pctBase.toFixed(1)+'% al local, queda en '+r.pct.toFixed(1)+'%.</div>':'')+
+
+  '<h3>Lineups</h3>'+
+  '<div class="row"><button class="ghost lu" data-pk="'+x.gamePk+'" data-ha="'+esc(a.team.name)+
+    '" data-hh="'+esc(h.team.name)+'" data-ta="'+a.team.id+'" data-th="'+h.team.id+
+    '" data-f="'+x.fecha.getTime()+'">Revisar lineups</button>'+
+    '<div class="out lu-out"></div></div>'+
+  '<div class="flag">La MLB los publica 2 a 4 horas antes del primer pitch. Antes de eso no hay nada que leer.</div>'+
 
   '<h3>Hándicap</h3>'+
   '<table>'+
@@ -603,6 +788,37 @@ function conectar(root){
       out.className='out '+(pp>=0.55?'si':'no');
       out.textContent=lado+' '+L+' K · '+pc(pp)+' · cuota justa '+american(pp*100)+
         (p.push>0.01?' · empate '+pc(p.push):'');
+    });
+  });
+  root.querySelectorAll('button.lu').forEach(function(btn){
+    var out=btn.parentNode.querySelector('.lu-out');
+    btn.addEventListener('click',function(){
+      btn.disabled=true; out.className='out'; out.textContent='Buscando lineups…';
+      var pk=btn.dataset.pk, f=new Date(+btn.dataset.f);
+      Promise.all([lineup(pk),regulares(+btn.dataset.ta,f),regulares(+btn.dataset.th,f)])
+      .then(function(r){
+        var lu=r[0], ra=r[1], rh=r[2];
+        if(!lu){ out.className='out no'; out.textContent='No se pudo leer el boxscore.'; btn.disabled=false; return; }
+        var html='';
+        [['away',btn.dataset.ha,ra],['home',btn.dataset.hh,rh]].forEach(function(t){
+          var L=lu[t[0]];
+          if(!L.ok){ html+='<div class="flag"><b>'+esc(t[1])+'</b>: lineup sin confirmar todavía.</div>'; return; }
+          var fuera=[];
+          if(t[2]&&t[2].length){
+            var hoy={}; (L.nombres||[]).forEach(function(n){ hoy[n]=1; });
+            fuera=t[2].length? [] : [];
+          }
+          html+='<div class="flag"><b>'+esc(t[1])+'</b> — lineup confirmado: '+esc(L.nombres.join(', '))+'</div>';
+        });
+        /* regulares fuera: comparar ids del lineup contra los habituales */
+        Promise.resolve().then(function(){
+          out.className='out';
+          out.innerHTML=html;
+          btn.textContent='Lineups cargados';
+        });
+      }).catch(function(){
+        out.className='out no'; out.textContent='Falló la búsqueda de lineups.'; btn.disabled=false;
+      });
     });
   });
   root.querySelectorAll('.cmp').forEach(function(box){
