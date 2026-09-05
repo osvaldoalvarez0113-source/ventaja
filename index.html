@@ -17,6 +17,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--night);color:var(--chalk);font-family:var(--body);
  font-size:15px;line-height:1.5;padding:0 0 64px;
+ padding-top:env(safe-area-inset-top);
  padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
 .wrap{max-width:560px;margin:0 auto;padding:0 16px}
 header{padding:22px 0 14px;border-bottom:1px solid var(--line);margin-bottom:14px}
@@ -154,7 +155,7 @@ footer{color:var(--muted);font-size:12px;padding:24px 0 0;line-height:1.6}
   al total. El multiplicador de carreras a porcentaje viene por defecto en ×13, que es lo que dan Poisson y Pythagorean
   para una diferencia de carreras dada; ×17 era el número original y se puede escoger arriba para comparar.
   Al total se le suman 0.18 carreras por los innings extra, que ocurren en cerca de uno de cada once juegos y
-  el modelo de nueve innings no cuenta. El bullpen quemado se mide contra la fecha oficial local del juego.
+  el modelo de nueve innings no cuenta. El bullpen quemado se mide contra la fecha oficial local del juego. Los venue_id de la tabla de parques están verificados uno por uno contra /api/v1/teams?sportId=1 de la MLB; el nombre del estadio que se muestra viene siempre de la API, no de la tabla, para que un id mal puesto se note enseguida.
   Las carreras esperadas de cada equipo salen de multiplicar su ofensiva por lo que permite el staff rival
   y dividir entre el promedio de la liga, no de promediar los dos números — así un abridor de élite baja el
   total de verdad en vez de quedarse anclado a la media. El viento se muestra pero no se calcula: hace falta
@@ -188,35 +189,34 @@ var EXTRAS=0.18;  /* carreras que aportan los innings extra */
 var PARK={
  19:   ['Coors Field',1.28,'abierto'],
  3313: ['Yankee Stadium',1.05,'abierto'],
- 3309: ['Fenway Park',1.08,'abierto'],
+ 3:    ['Fenway Park',1.08,'abierto'],
  17:   ['Wrigley Field',1.02,'abierto'],
  31:   ['PNC Park',0.95,'abierto'],
  2680: ['Petco Park',0.93,'abierto'],
  2395: ['Oracle Park',0.90,'abierto'],
  22:   ['Dodger Stadium',0.97,'abierto'],
- 2602: ['Great American',1.10,'abierto'],
+ 2602: ['Great American Ball Park',1.10,'abierto'],
  4169: ['loanDepot park',0.94,'retractil'],
- 12:   ['Citi Field',0.96,'abierto'],
- 2681: ['Citizens Bank',1.06,'abierto'],
+ 3289: ['Citi Field',0.96,'abierto'],
+ 2681: ['Citizens Bank Park',1.06,'abierto'],
  3312: ['Target Field',1.00,'abierto'],
- 4:    ['Angel Stadium',0.98,'abierto'],
+ 1:    ['Angel Stadium',0.98,'abierto'],
  2392: ['Daikin Park',1.03,'retractil'],
  680:  ['T-Mobile Park',0.92,'retractil'],
  14:   ['Rogers Centre',1.02,'retractil'],
  15:   ['Chase Field',1.04,'retractil'],
- 16:   ['Comerica Park',0.97,'abierto'],
+ 2394: ['Comerica Park',0.97,'abierto'],
  7:    ['Kauffman Stadium',1.01,'abierto'],
- 32:   ['Nationals Park',1.00,'abierto'],
- 2:    ['Oriole Park',1.02,'abierto'],
+ 3309: ['Nationals Park',1.00,'abierto'],
+ 2:    ['Oriole Park at Camden Yards',1.02,'abierto'],
  5325: ['Globe Life Field',0.99,'retractil'],
  4705: ['Truist Park',1.02,'abierto'],
- 3289: ['Busch Stadium',0.97,'abierto'],
- 2287: ['American Family',1.01,'retractil'],
- 5:    ['Rate Field',1.04,'abierto'],
- 2394: ['Progressive Field',0.99,'abierto'],
- 10:   ['Sutter Health Park',0.96,'abierto'],
- 12266:['Steinbrenner Field',1.03,'abierto'],
- 2523: ['Tropicana Field',0.96,'techo']
+ 2889: ['Busch Stadium',0.97,'abierto'],
+ 32:   ['American Family Field',1.01,'retractil'],
+ 4:    ['Rate Field',1.04,'abierto'],
+ 5:    ['Progressive Field',0.99,'abierto'],
+ 2529: ['Sutter Health Park',0.96,'abierto'],
+ 12:   ['Tropicana Field',0.96,'techo']
 };
 /* Igual que ajustar_total() en Betbot: solo se aplica el 60% del ajuste bruto. */
 var SUAVE=0.6;
@@ -736,7 +736,7 @@ function salidasBloque(nombre,l5,hist,se){
   var eraS = ip>0 ? er*9/ip : null;
   var apx  = nap ? ap/nap : null;
   var o='<div class="flag"><b>'+esc(nombre)+'</b> — '+w+'-'+l+' en sus últimas '+l5.starts.length+
-        ' salidas, con '+num(eraS)+' de ERA'+
+        (l5.starts.length===1?' salida':' salidas')+', con '+num(eraS)+' de ERA'+
         (se&&se.w!=null?' · '+se.w+'-'+se.l+' en la temporada':'')+'.</div>'+
     '<table class="log"><tr><th>Salida</th><th>IP</th><th>LP</th><th>K</th><th>Dec</th><th>Apoyo</th></tr>'+filas+'</table>';
   if(eraS!=null&&apx!=null){
@@ -838,7 +838,7 @@ function fila(g,year){
       return Promise.all([splitEquipo(a.team.id,mH,year), splitEquipo(h.team.id,mA,year)])
         .then(function(sp){
           el._d={a:a,h:h,pa:pa,ph:ph,l5a:r[0],l5h:r[1],sea:r[2],seh:r[3],oa:r[4],oh:r[5],ba:r[6],bh:r[7],
-                 cl:r[10], venue:(pkinfo?pkinfo[0]:(v.name||'')), venueId:v.id,
+                 cl:r[10], venue:(v.name||(pkinfo?pkinfo[0]:'')), venueId:v.id,
                  techo:techo, cerrado:cerrado,
                  manoA:mA, manoH:mH, splitA:sp[0], splitH:sp[1],
                  qa:r[13], qh:r[14],
