@@ -56,6 +56,12 @@ tr.usa td{color:var(--signal)}
 table.log{font-size:13px}
 table.log td,table.log th{padding:5px 0}
 table.log td.n{font-size:16px}
+details{margin:6px 0 2px}
+details summary{font-family:var(--cond);font-size:16px;color:var(--muted);
+ cursor:pointer;padding:6px 0;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary:before{content:'▸ '}
+details[open] summary:before{content:'▾ '}
 .calc{background:var(--panel);border-radius:6px;padding:12px;margin:12px 0;font-size:13px;color:var(--muted)}
 .calc div{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
 .calc b{font-family:var(--cond);font-size:17px;color:var(--chalk);font-weight:600;font-variant-numeric:tabular-nums}
@@ -451,6 +457,9 @@ function ultimas5(id,year){
               ip:ipToNum(s.stat.inningsPitched),
               er:+(s.stat.earnedRuns||0),
               k:+(s.stat.strikeOuts||0),
+              h:(s.stat.hits!=null?+s.stat.hits:null),
+              bb:(s.stat.baseOnBalls!=null?+s.stat.baseOnBalls:null),
+              r:(s.stat.runs!=null?+s.stat.runs:+(s.stat.earnedRuns||0)),
               dec:(+(s.stat.wins||0)?'G':(+(s.stat.losses||0)?'P':'ND')),
               opp:(s.opponent&&(s.opponent.abbreviation||s.opponent.name))||''};
     });
@@ -757,12 +766,35 @@ function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];}); }
 function num(v,d){ d=(d==null?2:d); return (v==null||!isFinite(v))?'—':v.toFixed(d); }
 function pc(v){ return (v*100).toFixed(1)+'%'; }
-/* Los innings se guardan en tercios decimales (4.667). Mostrarlos como "4.7"
-   confunde: parece "cuatro y siete decimas" cuando son 4 innings y 2 outs. */
+/* Los innings se guardan en tercios decimales (4.667). Se muestran como 4.2,
+   que es el formato de ESPN, MLB.com y Baseball Reference: 4 innings y 2 outs. */
+function ipMlb(n){
+  if(n==null||!isFinite(n)) return '—';
+  var outs=Math.round(n*3), ent=Math.floor(outs/3), r=outs%3;
+  return ent+'.'+r;
+}
 function ipTxt(n){
   if(n==null||!isFinite(n)) return '—';
   var outs=Math.round(n*3), ent=Math.floor(outs/3), r=outs%3;
   return ent+(r===1?'⅓':r===2?'⅔':'');
+}
+/* Game Score de Bill James. Un solo numero por salida: 50 es apertura promedio.
+   Cuenta hits y boletos, no solo carreras limpias, asi que no depende tanto de
+   la defensa ni de la suerte con corredores en base. */
+function gameScore(s){
+  if(s.h==null||s.bb==null) return null;
+  var outs=Math.round(s.ip*3);
+  var inn=Math.floor(outs/3);
+  var un=Math.max(0,(s.r||0)-(s.er||0));   /* carreras sucias, valen la mitad */
+  return Math.round(50+outs+Math.max(0,inn-4)*2+s.k-2*s.h-4*s.er-2*un-s.bb);
+}
+function gscTxt(g){
+  if(g==null) return '';
+  if(g>=80) return 'dominante';
+  if(g>=65) return 'buena';
+  if(g>=50) return 'promedio';
+  if(g>=40) return 'floja';
+  return 'mala';
 }
 
 /* Regresion a la media. El ancla por defecto es el promedio de la liga, pero si el
@@ -897,38 +929,53 @@ function salidasBloque(nombre,l5,hist,se){
     return '<div class="flag"><b>'+esc(nombre)+'</b>: no hay salidas registradas todavía.</div>';
   var mapa={};
   if(hist&&hist.juegos) hist.juegos.forEach(function(g){ mapa[g.pk]=g.rs; });
-  var w=0, l=0, er=0, ip=0, ks=0, ap=0, nap=0, filas='';
+  var w=0, l=0, er=0, ip=0, ks=0, ap=0, nap=0, filas='', det='';
+  var gs=0, ngs=0, hayG=false;
   l5.starts.slice().reverse().forEach(function(s){
     if(s.dec==='G') w++; else if(s.dec==='P') l++;
     er+=s.er; ip+=s.ip; ks+=s.k;
     var apo=mapa[s.pk];
     if(apo!=null){ ap+=apo; nap++; }
-    filas+='<tr><td>'+esc(s.f?s.f.slice(5):'—')+' '+esc(s.opp)+'</td>'+
-      '<td class="n">'+ipTxt(s.ip)+'</td><td class="n">'+s.er+'</td><td class="n">'+s.k+'</td>'+
-      '<td class="n">'+s.dec+'</td><td class="n">'+(apo!=null?apo:'—')+'</td></tr>';
+    var g=gameScore(s);
+    if(g!=null){ gs+=g; ngs++; hayG=true; }
+    var cual=esc(s.f?s.f.slice(5):'—')+' '+esc(s.opp);
+    filas+='<tr><td>'+cual+'</td><td class="n">'+ipMlb(s.ip)+'</td>'+
+      '<td class="n">'+(g==null?'—':g)+'</td>'+
+      '<td class="n">'+(apo!=null?apo:'—')+'</td></tr>';
+    det+='<tr><td>'+cual+'</td><td class="n">'+ipMlb(s.ip)+'</td>'+
+      '<td class="n">'+(s.h==null?'—':s.h)+'</td><td class="n">'+(s.bb==null?'—':s.bb)+'</td>'+
+      '<td class="n">'+s.k+'</td><td class="n">'+s.er+'</td><td class="n">'+s.dec+'</td></tr>';
   });
   var n=l5.starts.length;
   var eraS = ip>0 ? er*9/ip : null;
   var apx  = nap ? ap/nap : null;
   var ipx  = n ? ip/n : null;
   var kx   = n ? ks/n : null;
+  var gx   = ngs ? gs/ngs : null;
   var o='<div class="flag"><b>'+esc(nombre)+'</b> — '+w+'-'+l+' en sus últimas '+n+
         (n===1?' salida':' salidas')+', con '+num(eraS)+' de ERA'+
         (se&&se.w!=null?' · '+se.w+'-'+se.l+' en la temporada':'')+'.</div>'+
-    '<div class="flag" style="font-size:12px"><b>IP</b> innings (4⅔ = 4 innings y 2 outs) · '+
-    '<b>LP</b> carreras limpias, las que cuentan al ERA · <b>K</b> ponches · '+
-    '<b>Dec</b> G ganó, P perdió, ND sin decisión · '+
-    '<b>Apoyo</b> carreras que le anotó su propio equipo ese día (— = juego muy viejo o de hoy, sin dato).</div>'+
-    '<table class="log"><tr><th>Salida</th><th>IP</th><th>LP</th><th>K</th><th>Dec</th><th>Apoyo</th></tr>'+
+    '<div class="flag" style="font-size:12px"><b>IP</b> innings, formato de ESPN (4.2 = 4 innings y 2 outs) · '+
+    '<b>GSc</b> Game Score, una nota por salida: <b>50 es promedio</b>, 65+ buena, 80+ dominante, bajo 40 mala. '+
+    'Mezcla innings, hits, boletos, ponches y carreras, así que no la mueve tanto la suerte como al ERA · '+
+    '<b>Apoyo</b> carreras que le anotó su propio equipo ese día (— = juego de hoy o fuera del historial).</div>'+
+    '<table class="log"><tr><th>Salida</th><th>IP</th><th>GSc</th><th>Apoyo</th></tr>'+
     filas+
-    '<tr class="usa"><td>Promedio por salida</td><td class="n">'+ipTxt(ipx)+'</td>'+
-    '<td class="n">'+num(er/(n||1),1)+'</td><td class="n">'+num(kx,1)+'</td>'+
-    '<td class="n">—</td><td class="n">'+(apx!=null?num(apx,1):'—')+'</td></tr>'+
+    '<tr class="usa"><td>Promedio</td><td class="n">'+ipMlb(ipx)+'</td>'+
+    '<td class="n">'+(gx!=null?Math.round(gx):'—')+'</td>'+
+    '<td class="n">'+(apx!=null?num(apx,1):'—')+'</td></tr>'+
     '</table>'+
-    (ipx!=null?'<div class="flag">En una salida típica aguanta <b>'+ipTxt(ipx)+' innings</b> y poncha a <b>'+
-      num(kx,1)+'</b>. Lo que falte de los 9 innings lo tira el bullpen: mira su ERA más abajo.'+
+    '<details><summary>Ver el detalle (hits, boletos, ponches)</summary>'+
+    '<table class="log"><tr><th>Salida</th><th>IP</th><th>H</th><th>BB</th><th>K</th><th>LP</th><th>Dec</th></tr>'+
+    det+'</table>'+
+    '<div class="flag" style="font-size:12px"><b>H</b> hits · <b>BB</b> boletos · <b>K</b> ponches · '+
+    '<b>LP</b> carreras limpias · <b>Dec</b> G ganó, P perdió, ND sin decisión.</div></details>'+
+    (ipx!=null?'<div class="flag">En una salida típica aguanta <b>'+ipMlb(ipx)+' innings</b> y poncha a <b>'+
+      num(kx,1)+'</b>'+(gx!=null?', con Game Score de <b>'+Math.round(gx)+'</b> ('+gscTxt(Math.round(gx))+')':'')+
+      '. Lo que falte de los 9 innings lo tira el bullpen.'+
       (ipx<5?' Menos de 5 innings por salida es apertura corta — el bullpen decide este juego más que él.':'')+
-      '</div>':'');
+      '</div>':'')+
+    (!hayG?'<div class="flag" style="font-size:12px">Sin hits ni boletos en el log de este pitcher, así que no se pudo calcular el Game Score. Mira el detalle.</div>':'');
   if(eraS!=null&&apx!=null){
     var LR=(LIGA_RG!=null?LIGA_RG:4.30);
     if(eraS<3.60&&l>w)
