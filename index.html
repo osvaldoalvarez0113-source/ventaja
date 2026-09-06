@@ -221,7 +221,7 @@ footer summary{font-family:var(--cond);font-size:16px;color:var(--muted);padding
 <body>
 
 <div class="topbar"><div class="inner">
-  <h1 class="brand"><span class="ball">&#9918;</span>Ventaja <span class="ver">v6</span></h1>
+  <h1 class="brand"><span class="ball">&#9918;</span>Ventaja <span class="ver">v7</span></h1>
   <div class="sp"></div>
   <input type="date" id="fecha" style="max-width:170px">
   <button id="cargar">Cargar</button>
@@ -287,8 +287,9 @@ footer summary{font-family:var(--cond);font-size:16px;color:var(--muted);padding
   <button class="ghost" id="kalshi">&#128225; Traer precios de Kalshi</button>
 </div>
 <div id="kstatus" class="leyenda">Con el modo <b>Kalshi</b> puesto en &#9881;&#65039; Ajustes, este bot&oacute;n
-llena solo el precio del ganador de cada juego abierto. El h&aacute;ndicap, el total y los ponches
-siguen a mano: Kalshi no los lista por juego.</div>
+llena solo el precio del ganador de cada juego abierto. Kalshi bloquea las llamadas directas desde el
+navegador, as&iacute; que se intenta por varios relevos hasta que uno pase. El h&aacute;ndicap, el total y los
+ponches siguen a mano: Kalshi no los lista por juego.</div>
 
 <div id="status" class="status">Escoge la fecha y dale a cargar.</div>
 <div id="slate"></div>
@@ -609,6 +610,32 @@ function kEstado(t,err){
   e.className='leyenda'+(err?' status err':'');
   e.innerHTML=t;
 }
+/* Kalshi no manda las cabeceras que el navegador exige para llamarla desde otra
+   pagina (por eso salia "Load failed"). Se prueba primero directo, por si algun
+   dia lo permiten, y si no se pasa por un relevo publico que si las manda.
+   Son datos publicos de mercado, no va nada tuyo en la peticion. */
+var KURL='https://api.elections.kalshi.com/trade-api/v2/markets'+
+         '?series_ticker=KXMLBGAME&status=open&limit=500';
+var RELEVOS=[
+  {n:'directo',  f:function(u){ return u; }},
+  {n:'allorigins', f:function(u){ return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u); }},
+  {n:'corsproxy',  f:function(u){ return 'https://corsproxy.io/?url='+encodeURIComponent(u); }},
+  {n:'codetabs',   f:function(u){ return 'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u); }}
+];
+function pedirKalshi(i){
+  i=i||0;
+  if(i>=RELEVOS.length) return Promise.reject(new Error('ninguna v&iacute;a funcion&oacute;'));
+  var via=RELEVOS[i];
+  if(i>0) kEstado('Directo no se pudo. Probando por relevo <b>'+via.n+'</b>&hellip;');
+  return fetch(via.f(KURL)).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(d){
+    if(!d||!d.markets) throw new Error('respuesta rara');
+    d.__via=via.n;
+    return d;
+  }).catch(function(){ return pedirKalshi(i+1); });
+}
 function traerKalshi(){
   if(PLATA!=='kalshi'){
     kEstado('⚠️ Est&aacute;s en modo <b>Sportsbook</b>. Los precios de Kalshi vienen en centavos, '+
@@ -616,12 +643,7 @@ function traerKalshi(){
     return;
   }
   kEstado('Buscando precios en Kalshi&hellip;');
-  var url='https://api.elections.kalshi.com/trade-api/v2/markets'+
-          '?series_ticker=KXMLBGAME&status=open&limit=500';
-  fetch(url).then(function(r){
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
-  }).then(function(d){
+  pedirKalshi().then(function(d){
     var ms=(d&&d.markets)||[];
     if(!ms.length) throw new Error('sin mercados abiertos');
     KMKT={};
@@ -639,16 +661,17 @@ function traerKalshi(){
       if(r) puestos++; else faltan.push(el._d.a.team.abbreviation+'@'+el._d.h.team.abbreviation);
     });
     var hora=KSTAMP.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-    kEstado('✅ '+ms.length+' mercados de Kalshi le&iacute;dos a las '+hora+'. '+
+    kEstado('✅ '+ms.length+' mercados de Kalshi le&iacute;dos a las '+hora+
+      ' (v&iacute;a '+esc(d.__via||'?')+'). '+
       'Precios puestos en <b>'+puestos+'</b> juego(s) abierto(s).'+
       (faltan.length?' Sin encontrar: '+esc(faltan.join(', '))+'.':'')+
       ' Los juegos que abras despu&eacute;s se llenan solos. '+
       '<b>Solo se llena el ganador</b> &mdash; Kalshi no lista h&aacute;ndicap, total ni ponches por juego.');
   }).catch(function(e){
     KMKT=null;
-    kEstado('No se pudieron traer los precios ('+esc(e.message||'bloqueado por el navegador')+'). '+
-      'Puede ser que Kalshi no deje que una p&aacute;gina web la llame directo desde el tel&eacute;fono. '+
-      'Sigue escribiendo las cuotas a mano, que la app funciona igual.',true);
+    kEstado('No se pudieron traer los precios. Se prob&oacute; directo y por tres relevos distintos y '+
+      'ninguno pas&oacute; ('+esc(e.message||'bloqueado')+'). '+
+      'Sigue escribiendo las cuotas a mano, que la app funciona igual de bien.',true);
   });
 }
 /* Rellena el moneyline de un juego. Nunca pisa un valor que tu ya escribiste. */
