@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Ventaja &middot; Backtest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --night:#08161F;--night2:#0C1E2B;--panel:#122D3D;--panel2:#173747;
+ --line:#1F4457;--line2:#2A5A72;--chalk:#F1EEE4;--muted:#7E97A6;--muted2:#5D7684;
+ --signal:#E8B33C;--signal2:#F5C863;--good:#5FB07A;--bad:#D2685F;--info:#5FA8D3;
+ --cond:'Barlow Condensed','Helvetica Neue',sans-serif;
+ --body:system-ui,-apple-system,'Segoe UI',sans-serif;
+ --r:10px;--r2:14px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;color:var(--chalk);font-family:var(--body);font-size:15px;line-height:1.5;
+ background:var(--night);
+ background-image:radial-gradient(1200px 600px at 50% -200px,#173747 0%,transparent 70%);
+ background-attachment:fixed;padding:0 0 72px;
+ padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.wrap{max-width:600px;margin:0 auto;padding:0 14px}
+.topbar{position:sticky;top:0;z-index:20;background:rgba(8,22,31,.92);
+ -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+ border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.topbar .inner{max-width:600px;margin:0 auto;padding:10px 14px;display:flex;
+ align-items:center;gap:10px;flex-wrap:wrap}
+.brand{font-family:var(--cond);font-weight:700;font-size:30px;line-height:1;margin:0;
+ letter-spacing:.5px;display:flex;align-items:center;gap:7px}
+.brand .ball{font-size:22px}
+.ver{font-family:var(--cond);font-size:12px;font-weight:600;color:var(--night);
+ background:var(--signal);border-radius:20px;padding:2px 8px;letter-spacing:.5px}
+header.hero{padding:16px 0 4px}
+header.hero p{margin:0;color:var(--muted);font-size:13px;max-width:52ch}
+input[type=date],input[type=number],select{background:var(--panel);border:1px solid var(--line);
+ color:var(--chalk);border-radius:var(--r);padding:10px 11px;font-family:var(--body);
+ font-size:15px;min-width:0;-webkit-appearance:none;appearance:none}
+button{background:linear-gradient(180deg,var(--signal2),var(--signal));color:#12242F;border:0;
+ border-radius:var(--r);padding:11px 18px;font-family:var(--cond);font-weight:700;font-size:18px;
+ letter-spacing:.3px;cursor:pointer;box-shadow:0 1px 0 rgba(255,255,255,.25) inset}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.45}
+button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);
+ font-weight:600;box-shadow:none}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.campo{display:flex;gap:8px;align-items:center;margin:10px 0;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.campo label{flex:1 1 100%;font-family:var(--cond);font-size:16px;color:var(--chalk);letter-spacing:.2px}
+.campo input,.campo select{flex:1 1 auto;width:100%}
+.controls{display:flex;gap:8px;align-items:center;margin:14px 0 10px;flex-wrap:wrap}
+.caja{background:var(--panel);border:1px solid var(--line);border-radius:var(--r2);padding:14px;margin:12px 0}
+.status{color:var(--muted);font-size:13px;padding:10px 2px}
+.status.err{color:var(--bad);background:rgba(210,104,95,.1);border:1px solid rgba(210,104,95,.3);
+ border-radius:var(--r);padding:11px 12px}
+.prog{height:8px;background:var(--panel);border:1px solid var(--line);border-radius:20px;
+ overflow:hidden;margin:8px 0}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--signal),var(--signal2));
+ transition:width .25s}
+h3{font-family:var(--cond);font-size:20px;font-weight:600;margin:26px 0 6px;padding:0 0 7px;
+ border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;letter-spacing:.3px}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 4px}
+td,th{padding:8px 0;text-align:right;border-bottom:1px solid rgba(31,68,87,.6)}
+th:first-child,td:first-child{text-align:left;color:var(--muted);font-weight:400;padding-right:10px}
+th{font-family:var(--cond);font-size:16px;font-weight:600;color:var(--chalk);border-bottom:1px solid var(--line2)}
+td.n{font-family:var(--cond);font-size:18px;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+tr.usa td{color:var(--signal);font-weight:600}
+tr.usa td:first-child{color:var(--signal)}
+.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.kpi div{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+ padding:9px 10px;text-align:center}
+.kpi b{display:block;font-family:var(--cond);font-size:23px;font-weight:700;line-height:1.1;
+ font-variant-numeric:tabular-nums}
+.kpi span{font-size:10px;color:var(--muted);letter-spacing:.4px;display:block;margin-top:3px;line-height:1.3}
+.kpi .g b{color:var(--good)} .kpi .p b{color:var(--bad)}
+.flag{font-size:13px;color:var(--muted);padding:6px 0;line-height:1.55}
+.flag b{color:var(--chalk);font-weight:600}
+.veredicto{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--signal);
+ border-radius:var(--r);padding:12px 14px;margin:12px 0}
+.veredicto .q{font-family:var(--cond);font-size:23px;font-weight:700;line-height:1.15}
+.veredicto .r{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.55}
+.veredicto.g{border-left-color:var(--good)} .veredicto.g .q{color:var(--good)}
+.veredicto.p{border-left-color:var(--bad)} .veredicto.p .q{color:var(--bad)}
+.leyenda{font-size:12px;color:var(--muted2);line-height:1.55;background:var(--panel);
+ border-radius:var(--r);padding:9px 11px;margin:8px 0}
+.leyenda b{color:var(--muted);font-weight:600}
+details summary{font-family:var(--cond);font-size:16px;color:var(--muted);cursor:pointer;
+ padding:8px 0;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary:before{content:'▸ ';color:var(--muted2)}
+details[open] summary:before{content:'▾ '}
+footer{color:var(--muted2);font-size:11.5px;padding:26px 0 0;line-height:1.65;
+ border-top:1px solid var(--line);margin-top:28px}
+footer b{color:var(--muted)}
+@media (max-width:360px){.kpi{grid-template-columns:repeat(2,1fr)}}
+@media (prefers-reduced-motion:reduce){.prog i{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="inner">
+  <h1 class="brand"><span class="ball">&#9918;</span>Backtest <span class="ver">v1</span></h1>
+</div></div>
+
+<div class="wrap">
+
+<header class="hero">
+  <p>Corre tu f&oacute;rmula sobre juegos ya terminados, usando solo los n&uacute;meros que exist&iacute;an
+  el d&iacute;a de cada juego. Te dice si acierta, si el multiplicador est&aacute; bien puesto y qu&eacute;
+  pesos habr&iacute;a que usar.</p>
+</header>
+
+<div class="caja">
+  <div class="campo">
+    <label for="ini">Desde</label>
+    <input type="date" id="ini">
+  </div>
+  <div class="campo">
+    <label for="fin">Hasta</label>
+    <input type="date" id="fin">
+  </div>
+  <div class="campo">
+    <label for="modo">ERA del abridor</label>
+    <select id="modo">
+      <option value="mix" selected>Mezcla 70 temporada / 30 &uacute;ltimas 5</option>
+      <option value="season">Solo temporada</option>
+      <option value="last5">Solo &uacute;ltimas 5</option>
+      <option value="fip">FIP de temporada</option>
+    </select>
+  </div>
+  <div class="controls" style="margin-bottom:0">
+    <button id="correr">Correr backtest</button>
+    <button class="ghost" id="borrar">Borrar cach&eacute;</button>
+  </div>
+</div>
+
+<div id="status" class="status">Escoge el rango y dale a correr. La primera vez tarda varios minutos
+porque baja el historial de cada abridor; despu&eacute;s queda guardado y va r&aacute;pido.</div>
+<div class="prog"><i id="barra"></i></div>
+<div id="salida"></div>
+
+<footer>
+<details><summary>Qu&eacute; hace y qu&eacute; no hace este backtest</summary>
+
+  <p><b>El problema que resuelve.</b> Si le pides a la MLB el ERA de temporada de un pitcher, te da
+  el de hoy. Correr tu f&oacute;rmula sobre un juego de mayo con el ERA de septiembre es hacer trampa:
+  el modelo estar&iacute;a viendo el futuro y el resultado saldr&iacute;a bonito y falso. Aqu&iacute;
+  todo se reconstruye desde los game logs, salida por salida, cortando en la v&iacute;spera de cada
+  juego. El ERA, el FIP, las carreras por juego y el bullpen son los que exist&iacute;an esa
+  ma&ntilde;ana.</p>
+
+  <p><b>De d&oacute;nde sale cada n&uacute;mero.</b> ERA y FIP del abridor: suma de sus salidas
+  anteriores, con la misma regresi&oacute;n hacia su propio FIP que usa la app. Carreras por juego:
+  suma de los marcadores del equipo hasta la v&iacute;spera. ERA de bullpen: carreras limpias del
+  equipo menos las de sus abridores, dividido entre las entradas que no tiraron ellos. Las limpias del
+  equipo se estiman al 91.5% de las carreras totales, que es la proporci&oacute;n hist&oacute;rica de
+  la liga, y las entradas a 8.95 por juego. Es una estimaci&oacute;n, pero se aplica igual a los dos
+  equipos, as&iacute; que casi todo el error se cancela en la resta.</p>
+
+  <p><b>Lo que queda fuera.</b> Los splits contra zurdo y derecho no tienen versi&oacute;n
+  hist&oacute;rica en la API, as&iacute; que van apagados. El bullpen quemado necesita cuatro
+  boxscores por equipo por juego y eso son decenas de miles de llamadas. El factor de parque y la
+  temperatura no entran porque mueven el total, no el ganador, y esta primera fase mide solo el
+  ganador. La ofensiva de 14 d&iacute;as tampoco entra. O sea: lo que se mide aqu&iacute; es el
+  esqueleto de la f&oacute;rmula, no la app completa. Si el esqueleto no sirve, lo dem&aacute;s no lo
+  salva.</p>
+
+  <p><b>El abridor.</b> Se usa el que efectivamente abri&oacute;. Un cambio de &uacute;ltima hora te
+  habr&iacute;a agarrado con el otro nombre, as&iacute; que el backtest te favorece un poco
+  ah&iacute;. Es lo est&aacute;ndar y el sesgo es peque&ntilde;o.</p>
+
+  <p><b>Entrenamiento y prueba.</b> Los pesos ajustados se calculan con el primer 70% del rango en
+  orden de fecha y se miden contra el 30% final, que el ajuste nunca vio. Un peso que se ve
+  espectacular en su propio entrenamiento y flojo en la prueba est&aacute; memorizando ruido, no
+  aprendiendo nada. Por eso salen las dos cifras.</p>
+
+  <p><b>Cu&aacute;ntos juegos hacen falta.</b> Bajo 200 juegos casi nada de esto es firme. De 500 para
+  arriba el multiplicador y la calibraci&oacute;n empiezan a tener lectura. Los pesos necesitan
+  m&aacute;s: 1,000 o m&aacute;s antes de cambiarlos por lo que diga esta p&aacute;gina.</p>
+
+</details>
+</footer>
+
+</div>
+
+<script>
+var API='https://statsapi.mlb.com/api/v1';
+var ER_RATIO=0.915;     /* limpias / totales, promedio historico de la liga */
+var IP_JUEGO=8.95;      /* entradas que lanza un equipo por juego, en promedio */
+var MODO='mix';
+var CACHE_OK=true;
+
+/* ---------- utilidades ---------- */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[<>&]/g,function(c){
+  return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c]; }); }
+function num(v,d){ d=(d==null?2:d); return (v==null||!isFinite(v))?'—':v.toFixed(d); }
+function hoyISO(){ var t=new Date(), p=function(n){return String(n).padStart(2,'0');};
+  return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate()); }
+function ipToNum(ip){
+  if(ip==null) return 0;
+  var n=parseFloat(String(ip));
+  if(!isFinite(n)) return 0;
+  var dec=Math.round((n-Math.trunc(n))*10);
+  return Math.trunc(n)+(dec===1?1/3:dec===2?2/3:0);
+}
+function estado(t,err){
+  var e=$('status');
+  e.className='status'+(err?' err':'');
+  e.innerHTML=t;
+}
+function barra(f){ $('barra').style.width=Math.max(0,Math.min(100,f*100)).toFixed(1)+'%'; }
+
+/* ---------- red con cache y reintento ---------- */
+function guardar(k,v){
+  if(!CACHE_OK) return;
+  try{ localStorage.setItem('bt_'+k,JSON.stringify(v)); }
+  catch(e){ CACHE_OK=false; }   /* se llen&oacute; el almacenamiento: seguimos sin cache */
+}
+function leer(k){
+  try{ var t=localStorage.getItem('bt_'+k); return t?JSON.parse(t):null; }
+  catch(e){ return null; }
+}
+function pedir(url,intento){
+  intento=intento||0;
+  return fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).catch(function(e){
+    if(intento<2) return new Promise(function(res){ setTimeout(res,600*(intento+1)); })
+                    .then(function(){ return pedir(url,intento+1); });
+    throw e;
+  });
+}
+/* Cola con seis descargas a la vez: m&aacute;s que eso y Safari empieza a tumbar peticiones. */
+function cola(items,n,fn,paso){
+  return new Promise(function(res){
+    var i=0, vivos=0, hechos=0, out=new Array(items.length);
+    function sig(){
+      if(hechos===items.length){ res(out); return; }
+      while(vivos<n && i<items.length){
+        (function(k){
+          vivos++; i++;
+          Promise.resolve(fn(items[k],k)).then(function(v){ out[k]=v; },function(){ out[k]=null; })
+            .then(function(){ vivos--; hechos++; if(paso) paso(hechos,items.length); sig(); });
+        })(i);
+      }
+    }
+    if(!items.length) res(out); else sig();
+  });
+}
+
+/* ---------- calendario ---------- */
+/* Se baja la temporada completa hasta la fecha final, no solo el rango a probar:
+   las estad&iacute;sticas acumuladas del primer d&iacute;a necesitan todo lo anterior. */
+function mesesEntre(ini,fin){
+  var out=[], a=+ini.slice(0,4), m=+ini.slice(5,7);
+  var af=+fin.slice(0,4), mf=+fin.slice(5,7);
+  while(a<af || (a===af && m<=mf)){
+    var p=String(m).padStart(2,'0');
+    var ult=new Date(Date.UTC(a,m,0)).getUTCDate();
+    out.push({k:a+'-'+p, ini:a+'-'+p+'-01', fin:a+'-'+p+'-'+String(ult).padStart(2,'0')});
+    m++; if(m>12){ m=1; a++; }
+  }
+  return out;
+}
+function bajarMes(m,hasta){
+  var cached=leer('sched_'+m.k);
+  var fin=(m.fin>hasta)?hasta:m.fin;
+  if(cached && cached.hasta>=fin) return Promise.resolve(cached.g);
+  var u=API+'/schedule?sportId=1&gameType=R&startDate='+m.ini+'&endDate='+fin+
+        '&hydrate=probablePitcher,team';
+  return pedir(u).then(function(d){
+    var g=[];
+    (d.dates||[]).forEach(function(dd){
+      (dd.games||[]).forEach(function(x){
+        if(!x.status||x.status.abstractGameState!=='Final') return;
+        var t=x.teams; if(!t||!t.home||!t.away) return;
+        var ra=t.away.score, rh=t.home.score;
+        if(ra==null||rh==null||ra===rh) return;
+        g.push({d:x.officialDate||dd.date, pk:x.gamePk,
+                a:t.away.team.id, h:t.home.team.id,
+                na:t.away.team.abbreviation||'', nh:t.home.team.abbreviation||'',
+                ra:+ra, rh:+rh,
+                pa:(t.away.probablePitcher&&t.away.probablePitcher.id)||0,
+                ph:(t.home.probablePitcher&&t.home.probablePitcher.id)||0});
+      });
+    });
+    guardar('sched_'+m.k,{hasta:fin,g:g});
+    return g;
+  }).catch(function(){ return cached?cached.g:[]; });
+}
+
+/* ---------- game logs de abridores ---------- */
+function bajarLog(id,year){
+  var k='log_'+id+'_'+year;
+  var c=leer(k);
+  if(c && c.hasta && c.hasta>=LOG_HASTA) return Promise.resolve(c.s);
+  var u=API+'/people/'+id+'/stats?stats=gameLog&group=pitching&season='+year+'&gameType=R';
+  return pedir(u).then(function(d){
+    var sp=(d.stats&&d.stats[0]&&d.stats[0].splits)||[];
+    var s=sp.map(function(x){
+      var st=x.stat||{};
+      return {d:x.date||'', gs:+(st.gamesStarted||0),
+              ip:ipToNum(st.inningsPitched), er:+(st.earnedRuns||0),
+              hr:+(st.homeRuns||0), bb:+(st.baseOnBalls||0),
+              hbp:+(st.hitByPitch||0), k:+(st.strikeOuts||0),
+              tm:(x.team&&x.team.id)||0};
+    }).filter(function(x){ return x.d; });
+    s.sort(function(p,q){ return p.d<q.d?-1:(p.d>q.d?1:0); });
+    guardar(k,{hasta:LOG_HASTA,s:s});
+    return s;
+  }).catch(function(){ return c?c.s:[]; });
+}
+var LOG_HASTA='';
+
+/* ---------- estad&iacute;sticas cortadas a una fecha ---------- */
+function eraPitcher(log,fecha){
+  var er=0, ip=0, hr=0, bb=0, hbp=0, k=0, ult=[];
+  for(var i=0;i<log.length;i++){
+    var s=log[i];
+    if(s.d>=fecha) break;
+    if(s.gs!==1) continue;          /* solo aperturas */
+    er+=s.er; ip+=s.ip; hr+=s.hr; bb+=s.bb; hbp+=s.hbp; k+=s.k;
+    ult.push(s);
+  }
+  if(ip<=0) return null;
+  var u5=ult.slice(-5), er5=0, ip5=0;
+  u5.forEach(function(s){ er5+=s.er; ip5+=s.ip; });
+  return {era:er*9/ip, ip:ip, fip: ip>=10?(13*hr+3*(bb+hbp)-2*k)/ip+3.15:null,
+          era5: ip5>0?er5*9/ip5:null, ip5:ip5, n5:u5.length};
+}
+/* Misma regresi&oacute;n a la media que la app: ancla el FIP propio del pitcher, no la liga. */
+function reg(era,ip,prior,ancla,ligaEra){
+  if(era==null||!isFinite(era)) return null;
+  var L=(ancla!=null&&isFinite(ancla))?ancla:ligaEra;
+  return (era*ip+L*prior)/(ip+prior);
+}
+function eraUsado(p,ligaEra){
+  var anc=null;
+  if(p.fip!=null&&isFinite(p.fip)&&p.ip>0) anc=(p.fip*p.ip+ligaEra*30)/(p.ip+30);
+  var s=reg(p.era,p.ip,40,anc,ligaEra);
+  var l=(p.era5!=null)?reg(p.era5,p.ip5,25,anc,ligaEra):null;
+  var f=reg(p.fip,p.ip,40,null,ligaEra);
+  if(MODO==='season') return s;
+  if(MODO==='last5')  return l!=null?l:s;
+  if(MODO==='fip')    return f!=null?f:s;
+  if(s!=null&&l!=null) return s*0.70+l*0.30;
+  return s!=null?s:l;
+}
+
+/* ---------- probabilidad ---------- */
+function pmf(k,l){ if(l<=0) return k===0?1:0; var p=Math.exp(-l); for(var i=1;i<=k;i++) p=p*l/i; return p; }
+function poisLocal(la,lh){
+  var gana=0, emp=0;
+  for(var x=0;x<=22;x++){
+    var pa=pmf(x,la);
+    for(var y=0;y<=22;y++){
+      var pp=pa*pmf(y,lh);
+      if(y>x) gana+=pp; else if(y===x) emp+=pp;
+    }
+  }
+  return gana+emp/2;
+}
+
+/* ---------- &aacute;lgebra: resolver un sistema peque&ntilde;o ---------- */
+function resolver(A,b){
+  var n=b.length, M=A.map(function(r,i){ return r.concat([b[i]]); });
+  for(var c=0;c<n;c++){
+    var mejor=c;
+    for(var r=c+1;r<n;r++) if(Math.abs(M[r][c])>Math.abs(M[mejor][c])) mejor=r;
+    var t=M[c]; M[c]=M[mejor]; M[mejor]=t;
+    if(Math.abs(M[c][c])<1e-12) return null;
+    for(var r2=0;r2<n;r2++){
+      if(r2===c) continue;
+      var f=M[r2][c]/M[c][c];
+      for(var c2=c;c2<=n;c2++) M[r2][c2]-=f*M[c][c2];
+    }
+  }
+  return M.map(function(r,i){ return r[n]/M[i][i]; });
+}
+/* M&iacute;nimos cuadrados sobre y en {0,1}: da la misma forma lineal de tu f&oacute;rmula. */
+function ols(rows,ini,fin){
+  var n=4, A=[], b=[];
+  for(var i=0;i<n;i++){ A.push([0,0,0,0]); b.push(0); }
+  for(var r=ini;r<fin;r++){
+    var x=[1,rows[r].x1,rows[r].x2,rows[r].x3], y=rows[r].y;
+    for(var i2=0;i2<n;i2++){
+      for(var j=0;j<n;j++) A[i2][j]+=x[i2]*x[j];
+      b[i2]+=x[i2]*y;
+    }
+  }
+  for(var d=0;d<n;d++) A[d][d]+=1e-8;
+  return resolver(A,b);
+}
+/* Regresi&oacute;n log&iacute;stica por Newton: el techo de lo que dan estas tres entradas. */
+function logistica(rows,ini,fin){
+  var B=[0,0,0,0];
+  for(var it=0;it<25;it++){
+    var A=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]], g=[0,0,0,0];
+    for(var r=ini;r<fin;r++){
+      var x=[1,rows[r].x1,rows[r].x2,rows[r].x3];
+      var z=B[0]+B[1]*x[1]+B[2]*x[2]+B[3]*x[3];
+      var p=1/(1+Math.exp(-Math.max(-30,Math.min(30,z))));
+      var w=Math.max(1e-6,p*(1-p)), e=rows[r].y-p;
+      for(var i=0;i<4;i++){
+        g[i]+=x[i]*e;
+        for(var j=0;j<4;j++) A[i][j]+=w*x[i]*x[j];
+      }
+    }
+    for(var d=0;d<4;d++) A[d][d]+=1e-6;
+    var paso=resolver(A,g);
+    if(!paso) break;
+    var mov=0;
+    for(var k=0;k<4;k++){ B[k]+=paso[k]; mov+=Math.abs(paso[k]); }
+    if(mov<1e-8) break;
+  }
+  return B;
+}
+
+/* ---------- m&eacute;tricas ---------- */
+function metricas(rows,ini,fin,fp){
+  var n=0, br=0, ll=0, ac=0;
+  for(var r=ini;r<fin;r++){
+    var p=fp(rows[r]);
+    p=Math.max(0.001,Math.min(0.999,p));
+    var y=rows[r].y;
+    br+=(p-y)*(p-y);
+    ll+=-(y*Math.log(p)+(1-y)*Math.log(1-p));
+    if((p>=0.5)===(y===1)) ac++;
+    n++;
+  }
+  return n?{n:n, brier:br/n, ll:ll/n, acc:ac/n*100}:null;
+}
+function pFormula(r,w1,w2,w3,hm,mult){
+  var dl=r.x1*w1+r.x2*w2+r.x3*w3+hm;
+  var p=50+dl*mult;
+  return Math.max(22,Math.min(78,p))/100;
+}
+
+/* ---------- el motor ---------- */
+function correr(){
+  var ini=$('ini').value, fin=$('fin').value;
+  if(!ini||!fin||ini>fin){ estado('Revisa las fechas: la de inicio tiene que ir antes que la final.',true); return; }
+  MODO=$('modo').value;
+  var year=+ini.slice(0,4);
+  if(+fin.slice(0,4)!==year){ estado('Por ahora el backtest corre una temporada a la vez. Deja las dos fechas en el mismo a&ntilde;o.',true); return; }
+  LOG_HASTA=fin;
+  $('correr').disabled=true;
+  $('salida').innerHTML='';
+  barra(0);
+
+  var arranque=year+'-03-01';
+  var meses=mesesEntre(arranque,fin);
+  estado('Bajando el calendario de la temporada&hellip;');
+
+  cola(meses,4,function(m){ return bajarMes(m,fin); },function(h,t){ barra(h/t*0.12); })
+  .then(function(partes){
+    var juegos=[];
+    partes.forEach(function(g){ if(g) juegos=juegos.concat(g); });
+    juegos.sort(function(p,q){ return p.d<q.d?-1:(p.d>q.d?1:0); });
+    if(!juegos.length) throw new Error('no se encontraron juegos terminados en ese rango');
+
+    /* Todo abridor de la temporada, no solo los del rango: sus salidas viejas
+       hacen falta para el ERA acumulado y para separar el bullpen. */
+    var ids={};
+    juegos.forEach(function(g){ if(g.pa) ids[g.pa]=1; if(g.ph) ids[g.ph]=1; });
+    var lista=Object.keys(ids).map(Number);
+    estado('Calendario listo: '+juegos.length+' juegos terminados. Bajando el historial de '+
+           lista.length+' abridores&hellip;');
+
+    return cola(lista,6,function(id){ return bajarLog(id,year); },
+      function(h,t){ barra(0.12+h/t*0.80); }
+    ).then(function(logs){
+      var LOG={};
+      lista.forEach(function(id,i){ LOG[id]=logs[i]||[]; });
+      barra(0.94);
+      estado('Reconstruyendo los n&uacute;meros de cada fecha&hellip;');
+      return new Promise(function(res){ setTimeout(function(){ res(analizar(juegos,LOG,ini,fin)); },30); });
+    });
+  }).then(function(){
+    barra(1);
+    $('correr').disabled=false;
+  }).catch(function(e){
+    estado('No se pudo completar ('+esc(e.message||e)+'). Si fue la conexi&oacute;n, vuelve a darle: lo que ya baj&oacute; qued&oacute; guardado.',true);
+    $('correr').disabled=false;
+    barra(0);
+  });
+}
+
+function analizar(juegos,LOG,ini,fin){
+  /* --- acumulados de equipo y de liga, por fecha --- */
+  var eq={};   /* teamId -> {g,rs,ra} acumulado mientras recorremos */
+  var liga={g:0,r:0};
+  var starterAcum={};  /* teamId -> {ip,er} de sus abridores */
+  var snapEq={}, snapLiga={};   /* fecha -> copia congelada antes de ese d&iacute;a */
+  var fechas=[];
+  var porFecha={};
+  juegos.forEach(function(g){
+    if(!porFecha[g.d]){ porFecha[g.d]=[]; fechas.push(g.d); }
+    porFecha[g.d].push(g);
+  });
+
+  /* Salidas de abridores agrupadas por equipo y fecha, para restarlas al total. */
+  var salidas={};
+  for(var id in LOG){
+    LOG[id].forEach(function(s){
+      if(s.gs!==1||!s.tm) return;
+      (salidas[s.d]=salidas[s.d]||[]).push(s);
+    });
+  }
+
+  fechas.forEach(function(f){
+    /* congelar el estado ANTES de jugar los juegos de esta fecha */
+    var ce={}; for(var t in eq) ce[t]={g:eq[t].g, rs:eq[t].rs, ra:eq[t].ra,
+                                       sip:(starterAcum[t]||{ip:0,er:0}).ip,
+                                       ser:(starterAcum[t]||{ip:0,er:0}).er};
+    snapEq[f]=ce;
+    snapLiga[f]={g:liga.g, r:liga.r};
+    /* ahora s&iacute;, sumar lo de este d&iacute;a */
+    porFecha[f].forEach(function(g){
+      [[g.a,g.ra,g.rh],[g.h,g.rh,g.ra]].forEach(function(t){
+        var e=eq[t[0]]=eq[t[0]]||{g:0,rs:0,ra:0};
+        e.g++; e.rs+=t[1]; e.ra+=t[2];
+      });
+      liga.g+=2; liga.r+=g.ra+g.rh;
+    });
+    (salidas[f]||[]).forEach(function(s){
+      var a=starterAcum[s.tm]=starterAcum[s.tm]||{ip:0,er:0};
+      a.ip+=s.ip; a.er+=s.er;
+    });
+  });
+
+  function bullpen(snap,tid){
+    var e=snap[tid];
+    if(!e||e.g<10) return null;
+    var teamEr=e.ra*ER_RATIO, teamIp=e.g*IP_JUEGO;
+    var er=teamEr-e.ser, ip=teamIp-e.sip;
+    if(ip<40) return null;
+    var v=er*9/ip;
+    if(!isFinite(v)) return null;
+    return Math.max(2.0,Math.min(7.5,v));
+  }
+
+  /* --- armar una fila por juego del rango --- */
+  var rows=[], fuera={pit:0,eq:0,pen:0};
+  juegos.forEach(function(g){
+    if(g.d<ini||g.d>fin) return;
+    if(!g.pa||!g.ph){ fuera.pit++; return; }
+    var la=LOG[g.pa], lh=LOG[g.ph];
+    if(!la||!lh){ fuera.pit++; return; }
+    var sl=snapLiga[g.d];
+    if(!sl||sl.g<200){ fuera.eq++; return; }
+    var ligaRg=sl.r/sl.g;
+    var ligaEra=ligaRg*ER_RATIO*9/IP_JUEGO;
+
+    var pa=eraPitcher(la,g.d), ph=eraPitcher(lh,g.d);
+    if(!pa||!ph||pa.ip<10||ph.ip<10){ fuera.pit++; return; }
+    var eA=eraUsado(pa,ligaEra), eH=eraUsado(ph,ligaEra);
+    if(eA==null||eH==null){ fuera.pit++; return; }
+
+    var se=snapEq[g.d];
+    var ea=se[g.a], eh=se[g.h];
+    if(!ea||!eh||ea.g<10||eh.g<10){ fuera.eq++; return; }
+    var rgA=ea.rs/ea.g, rgH=eh.rs/eh.g;
+
+    var bpA=bullpen(se,g.a), bpH=bullpen(se,g.h);
+    if(bpA==null||bpH==null){ fuera.pen++; return; }
+
+    /* Poisson independiente, con las mismas entradas pero sin pasar por tu f&oacute;rmula. */
+    var permH=(eH*6/9+bpH*3/9)*1.08, permA=(eA*6/9+bpA*3/9)*1.08;
+    var lamA=Math.max(1.5,Math.min(9,rgA*permH/ligaRg));
+    var lamH=Math.max(1.5,Math.min(9,rgH*permA/ligaRg));
+
+    rows.push({
+      d:g.d, juego:g.na+' @ '+g.nh,
+      x1:eA-eH, x2:rgH-rgA, x3:bpA-bpH,
+      y:(g.rh>g.ra)?1:0,
+      pois:poisLocal(lamA,lamH)
+    });
+  });
+
+  if(rows.length<30){
+    estado('Solo quedaron '+rows.length+' juegos utilizables. Ampl&iacute;a el rango: con menos de '+
+           '200 juegos nada de esto tiene lectura.',true);
+    return;
+  }
+  rows.sort(function(p,q){ return p.d<q.d?-1:(p.d>q.d?1:0); });
+  pintar(rows,fuera,ini,fin);
+}
+
+/* ---------- resultados ---------- */
+function pintar(rows,fuera,ini,fin){
+  var N=rows.length;
+  var W1=0.65, W2=0.5, W3=0.25, HM=0.12;
+  var actual=function(mult){ return function(r){ return pFormula(r,W1,W2,W3,HM,mult); }; };
+
+  var m13=metricas(rows,0,N,actual(13));
+  var m17=metricas(rows,0,N,actual(17));
+  var mPois=metricas(rows,0,N,function(r){ return r.pois; });
+  var baseLocal=rows.filter(function(r){ return r.y===1; }).length/N;
+  var mBase=metricas(rows,0,N,function(){ return baseLocal; });
+
+  var o='';
+
+  /* --- resumen --- */
+  o+='<h3><span>📋</span>Lo que pas&oacute;</h3>';
+  o+='<div class="flag">'+N+' juegos evaluados entre el '+esc(ini)+' y el '+esc(fin)+'. '+
+     'El local gan&oacute; el '+(baseLocal*100).toFixed(1)+'% de las veces.</div>';
+  o+='<div class="kpi">'+
+     '<div><b>'+m13.acc.toFixed(1)+'%</b><span>acierto con &times;13</span></div>'+
+     '<div><b>'+m13.brier.toFixed(4)+'</b><span>Brier con &times;13</span></div>'+
+     '<div><b>'+mBase.brier.toFixed(4)+'</b><span>Brier de no saber nada</span></div>'+
+     '</div>';
+  var gana13=m13.brier<mBase.brier;
+  o+='<div class="veredicto '+(gana13?'g':'p')+'"><div class="q">'+
+     (gana13?'Tu f&oacute;rmula le gana a no saber nada':'Tu f&oacute;rmula no le gana a no saber nada')+
+     '</div><div class="r">'+
+     (gana13
+       ? 'El Brier baja de '+mBase.brier.toFixed(4)+' a '+m13.brier.toFixed(4)+
+         ' ('+((1-m13.brier/mBase.brier)*100).toFixed(1)+'% mejor). El Brier mide el error al cuadrado: '+
+         'mientras m&aacute;s bajo, mejor. La referencia es apostarle siempre al local con el mismo '+
+         'porcentaje fijo, sin mirar un solo dato del juego.'
+       : 'El Brier sube de '+mBase.brier.toFixed(4)+' a '+m13.brier.toFixed(4)+
+         '. O sea que decir siempre &quot;el local gana el '+(baseLocal*100).toFixed(1)+
+         '%&quot; sin mirar nada le gana a la f&oacute;rmula. Eso no significa que la idea est&eacute; '+
+         'mal, pero s&iacute; que con estos pesos y este multiplicador no est&aacute; extrayendo se&ntilde;al.')+
+     '</div></div>';
+
+  o+='<table>'+
+     '<tr><th>Modelo</th><th>Acierto</th><th>Brier</th><th>Log loss</th></tr>'+
+     '<tr class="usa"><td>Tu f&oacute;rmula &times;13</td><td class="n">'+m13.acc.toFixed(1)+'%</td>'+
+       '<td class="n">'+m13.brier.toFixed(4)+'</td><td class="n">'+m13.ll.toFixed(4)+'</td></tr>'+
+     '<tr><td>Tu f&oacute;rmula &times;17</td><td class="n">'+m17.acc.toFixed(1)+'%</td>'+
+       '<td class="n">'+m17.brier.toFixed(4)+'</td><td class="n">'+m17.ll.toFixed(4)+'</td></tr>'+
+     '<tr><td>Poisson puro</td><td class="n">'+mPois.acc.toFixed(1)+'%</td>'+
+       '<td class="n">'+mPois.brier.toFixed(4)+'</td><td class="n">'+mPois.ll.toFixed(4)+'</td></tr>'+
+     '<tr><td>Siempre el local</td><td class="n">'+(baseLocal*100).toFixed(1)+'%</td>'+
+       '<td class="n">'+mBase.brier.toFixed(4)+'</td><td class="n">'+mBase.ll.toFixed(4)+'</td></tr>'+
+     '</table>';
+  o+='<div class="flag">'+
+     (mPois.brier<m13.brier
+       ? 'El Poisson, que usa las mismas tres entradas pero las combina en carreras esperadas en vez de '+
+         'en tu suma de pesos, sale mejor. Vale la pena mirarlo como candidato a ganador, no solo para el h&aacute;ndicap.'
+       : 'Tu f&oacute;rmula le gana al Poisson armado con las mismas entradas. La suma de pesos est&aacute; '+
+         'haciendo su trabajo.')+'</div>';
+
+  /* --- multiplicador --- */
+  o+='<h3><span>📈</span>El multiplicador</h3>';
+  var mejorM=null, filas='';
+  for(var mm=6;mm<=24;mm+=1){
+    var r=metricas(rows,0,N,actual(mm));
+    if(!mejorM||r.brier<mejorM.brier) mejorM={mult:mm, brier:r.brier, acc:r.acc, ll:r.ll};
+  }
+  for(var mm2=6;mm2<=24;mm2+=2){
+    var r2=metricas(rows,0,N,actual(mm2));
+    var marca=(mm2===13||mm2===17)?' usa':'';
+    filas+='<tr class="'+marca.trim()+'"><td>&times; '+mm2+'</td><td class="n">'+r2.acc.toFixed(1)+'%</td>'+
+           '<td class="n">'+r2.brier.toFixed(4)+'</td></tr>';
+  }
+  o+='<div class="veredicto"><div class="q">El mejor es &times; '+mejorM.mult+'</div>'+
+     '<div class="r">Brier '+mejorM.brier.toFixed(4)+', acierto '+mejorM.acc.toFixed(1)+'%. '+
+     'T&uacute; est&aacute;s corriendo &times;13 (Brier '+m13.brier.toFixed(4)+'). '+
+     (Math.abs(mejorM.mult-13)<=1
+       ? 'Pr&aacute;cticamente lo mismo: el 13 est&aacute; bien puesto.'
+       : (mejorM.mult<13
+          ? 'El &oacute;ptimo es m&aacute;s bajo, o sea que tu modelo viene inflando: se aleja del 50% '+
+            'm&aacute;s de lo que los datos justifican.'
+          : 'El &oacute;ptimo es m&aacute;s alto: tu modelo viene siendo m&aacute;s t&iacute;mido de lo '+
+            'necesario y podr&iacute;a separarse m&aacute;s del 50%.'))+
+     '</div></div>';
+  o+='<table><tr><th>Multiplicador</th><th>Acierto</th><th>Brier</th></tr>'+filas+'</table>';
+
+  /* --- calibraci&oacute;n --- */
+  o+='<h3><span>⚖️</span>Calibraci&oacute;n</h3>';
+  var tramos=[[0,45],[45,50],[50,55],[55,60],[60,65],[65,101]];
+  var cal='<table><tr><th>Cuando dice…</th><th>Dijo</th><th>Pas&oacute;</th><th>n</th></tr>';
+  var hayCal=false;
+  tramos.forEach(function(t){
+    var g=rows.filter(function(r){
+      var p=pFormula(r,W1,W2,W3,HM,13)*100;
+      return p>=t[0]&&p<t[1];
+    });
+    if(g.length<10) return;
+    hayCal=true;
+    var dicho=0, real=0;
+    g.forEach(function(r){ dicho+=pFormula(r,W1,W2,W3,HM,13)*100; real+=r.y; });
+    var dif=(real/g.length*100)-(dicho/g.length);
+    cal+='<tr><td>'+t[0]+' a '+(t[1]>100?100:t[1])+'%</td>'+
+         '<td class="n">'+(dicho/g.length).toFixed(1)+'%</td>'+
+         '<td class="n">'+(real/g.length*100).toFixed(1)+'%</td>'+
+         '<td class="n">'+g.length+'</td></tr>';
+  });
+  cal+='</table>';
+  o+=hayCal?cal:'<div class="flag">No hay suficientes juegos en cada tramo para leer la calibraci&oacute;n. Ampl&iacute;a el rango.</div>';
+  o+='<div class="leyenda">La columna <b>Dijo</b> es el promedio que dio el modelo en ese tramo; '+
+     '<b>Pas&oacute;</b> es lo que ocurri&oacute; de verdad. Si Dijo queda por encima de Pas&oacute; '+
+     'de forma consistente, el modelo viene inflado y hay que bajarle el multiplicador. Si queda por '+
+     'debajo, se est&aacute; quedando corto.</div>';
+
+  /* --- pesos ajustados --- */
+  o+='<h3><span>🔧</span>Los pesos, ajustados a los datos</h3>';
+  var corte=Math.floor(N*0.7);
+  var B=ols(rows,0,corte);
+  var L=logistica(rows,0,corte);
+  if(!B){
+    o+='<div class="flag">No se pudo ajustar el sistema con estos datos.</div>';
+  }else{
+    /* Se ancla w1 en 0.65 y el multiplicador absorbe la escala, que es como
+       est&aacute; escrita tu f&oacute;rmula hoy. */
+    var multFit=B[1]*100/W1;
+    var w2Fit=(multFit!==0)?B[2]*100/multFit:null;
+    var w3Fit=(multFit!==0)?B[3]*100/multFit:null;
+    var hmFit=(multFit!==0)?(B[0]-0.5)*100/multFit:null;
+    var pFit=function(r){ return Math.max(0.22,Math.min(0.78,B[0]+B[1]*r.x1+B[2]*r.x2+B[3]*r.x3)); };
+    var pLog=function(r){
+      var z=L[0]+L[1]*r.x1+L[2]*r.x2+L[3]*r.x3;
+      return 1/(1+Math.exp(-Math.max(-30,Math.min(30,z))));
+    };
+    var eTuTr=metricas(rows,0,corte,actual(13)), eTuTe=metricas(rows,corte,N,actual(13));
+    var eFiTr=metricas(rows,0,corte,pFit),       eFiTe=metricas(rows,corte,N,pFit);
+    var eLoTr=metricas(rows,0,corte,pLog),       eLoTe=metricas(rows,corte,N,pLog);
+
+    o+='<div class="flag">Ajustado con los primeros '+corte+' juegos y medido contra los '+(N-corte)+
+       ' &uacute;ltimos, que el ajuste nunca vio.</div>';
+    o+='<table><tr><th></th><th>Tuyo</th><th>Ajustado</th></tr>'+
+       '<tr><td>Peso del abridor</td><td class="n">'+W1.toFixed(2)+'</td><td class="n">'+W1.toFixed(2)+'</td></tr>'+
+       '<tr><td>Peso de la ofensiva</td><td class="n">'+W2.toFixed(2)+'</td><td class="n">'+num(w2Fit)+'</td></tr>'+
+       '<tr><td>Peso del bullpen</td><td class="n">'+W3.toFixed(2)+'</td><td class="n">'+num(w3Fit)+'</td></tr>'+
+       '<tr><td>Local&iacute;a</td><td class="n">'+HM.toFixed(2)+'</td><td class="n">'+num(hmFit)+'</td></tr>'+
+       '<tr class="usa"><td>Multiplicador</td><td class="n">13</td><td class="n">'+num(multFit,1)+'</td></tr>'+
+       '</table>';
+    o+='<div class="leyenda">El peso del abridor se deja fijo en 0.65 a prop&oacute;sito: en tu '+
+       'f&oacute;rmula solo importan las proporciones entre los tres pesos, y el multiplicador se '+
+       'encarga de la escala. Anclando uno, los otros dos y el multiplicador quedan determinados.</div>';
+    o+='<table><tr><th>Modelo</th><th>Brier entrena</th><th>Brier prueba</th></tr>'+
+       '<tr class="usa"><td>Tu f&oacute;rmula &times;13</td><td class="n">'+eTuTr.brier.toFixed(4)+
+         '</td><td class="n">'+eTuTe.brier.toFixed(4)+'</td></tr>'+
+       '<tr><td>Pesos ajustados</td><td class="n">'+eFiTr.brier.toFixed(4)+
+         '</td><td class="n">'+eFiTe.brier.toFixed(4)+'</td></tr>'+
+       '<tr><td>Log&iacute;stica</td><td class="n">'+eLoTr.brier.toFixed(4)+
+         '</td><td class="n">'+eLoTe.brier.toFixed(4)+'</td></tr>'+
+       '</table>';
+    var mejora=eTuTe.brier-eFiTe.brier;
+    o+='<div class="veredicto '+(mejora>0.002?'g':'')+'"><div class="q">'+
+       (mejora>0.002?'Los pesos ajustados aguantan fuera de su entrenamiento'
+                    :'Los pesos ajustados no mejoran nada real')+'</div><div class="r">'+
+       (mejora>0.002
+         ? 'En el tramo de prueba el Brier baja '+mejora.toFixed(4)+'. Si esto se repite en otro rango '+
+           'de fechas distinto, vale la pena cambiar los pesos de la app.'
+         : 'En el tramo de prueba la diferencia es de '+mejora.toFixed(4)+', o sea nada o peor. '+
+           'Tus pesos de siempre est&aacute;n bien; no los toques por este resultado.')+
+       ' La l&iacute;nea log&iacute;stica es el techo de lo que se puede sacar de estas tres entradas: '+
+       'si tu f&oacute;rmula ya est&aacute; cerca de ella, el problema no son los pesos sino que hacen '+
+       'falta datos nuevos.</div></div>';
+  }
+
+  /* --- doble conteo --- */
+  o+='<h3><span>🔍</span>&iquest;Se est&aacute;n contando cosas dos veces?</h3>';
+  function corr(f,g){
+    var n=rows.length, sx=0, sy=0, sxx=0, syy=0, sxy=0;
+    rows.forEach(function(r){ var a=f(r), b=g(r); sx+=a; sy+=b; sxx+=a*a; syy+=b*b; sxy+=a*b; });
+    var num1=n*sxy-sx*sy, den=Math.sqrt((n*sxx-sx*sx)*(n*syy-sy*sy));
+    return den>0?num1/den:0;
+  }
+  var c12=corr(function(r){return r.x1;},function(r){return r.x2;});
+  var c13c=corr(function(r){return r.x1;},function(r){return r.x3;});
+  var c23=corr(function(r){return r.x2;},function(r){return r.x3;});
+  o+='<table><tr><th>Par</th><th>Correlaci&oacute;n</th></tr>'+
+     '<tr><td>Abridores y ofensivas</td><td class="n">'+c12.toFixed(3)+'</td></tr>'+
+     '<tr><td>Abridores y bullpens</td><td class="n">'+c13c.toFixed(3)+'</td></tr>'+
+     '<tr><td>Ofensivas y bullpens</td><td class="n">'+c23.toFixed(3)+'</td></tr>'+
+     '</table>';
+  var peor=Math.max(Math.abs(c12),Math.abs(c13c),Math.abs(c23));
+  o+='<div class="flag">'+
+     (peor>=0.4
+       ? 'Hay solape serio: dos de los tres t&eacute;rminos miden en buena parte lo mismo, as&iacute; que '+
+         'la ventaja se cuenta doble y el modelo se separa del 50% m&aacute;s de lo que debe. Eso explica '+
+         'un multiplicador &oacute;ptimo m&aacute;s bajo que el que usas.'
+       : peor>=0.2
+         ? 'Solape moderado, normal en b&eacute;isbol: los buenos equipos tienden a ser buenos en todo. '+
+           'No es para alarmarse, pero el multiplicador ajustado ya lo est&aacute; compensando.'
+         : 'Los tres t&eacute;rminos aportan cosas distintas. No hay doble conteo apreciable.')+
+     '</div>';
+
+  /* --- descartes --- */
+  var perdidos=fuera.pit+fuera.eq+fuera.pen;
+  if(perdidos){
+    o+='<h3><span>🚫</span>Juegos descartados</h3>';
+    o+='<table>'+
+       '<tr><td>Sin abridor o con muy pocos innings</td><td class="n">'+fuera.pit+'</td></tr>'+
+       '<tr><td>Equipo o liga con muy pocos juegos jugados</td><td class="n">'+fuera.eq+'</td></tr>'+
+       '<tr><td>Bullpen no reconstruible</td><td class="n">'+fuera.pen+'</td></tr>'+
+       '</table>';
+    o+='<div class="flag">Se descartan a prop&oacute;sito: un ERA de tres innings no es un ERA, y '+
+       'meterlo con regresi&oacute;n a la media solo mete ruido. Los juegos de las dos primeras semanas '+
+       'de temporada casi siempre caen aqu&iacute;.</div>';
+  }
+
+  o+='<div class="controls"><button class="ghost" id="copiar">Copiar resultados</button></div>';
+  o+='<div id="copiado" class="flag"></div>';
+
+  $('salida').innerHTML=o;
+  estado('Listo: '+N+' juegos evaluados.');
+
+  /* texto plano para pegarlo en el chat */
+  var txt='BACKTEST VENTAJA '+ini+' a '+fin+' | modo ERA: '+MODO+'\n'+
+    'n='+N+' | local gana '+(baseLocal*100).toFixed(1)+'%\n'+
+    'x13: acc '+m13.acc.toFixed(1)+'% brier '+m13.brier.toFixed(4)+' ll '+m13.ll.toFixed(4)+'\n'+
+    'x17: acc '+m17.acc.toFixed(1)+'% brier '+m17.brier.toFixed(4)+'\n'+
+    'poisson: acc '+mPois.acc.toFixed(1)+'% brier '+mPois.brier.toFixed(4)+'\n'+
+    'base local fijo: brier '+mBase.brier.toFixed(4)+'\n'+
+    'mejor mult: x'+mejorM.mult+' brier '+mejorM.brier.toFixed(4)+'\n'+
+    'correlaciones: era/of '+c12.toFixed(3)+' era/pen '+c13c.toFixed(3)+' of/pen '+c23.toFixed(3)+'\n'+
+    'descartados: pitcher '+fuera.pit+' equipo '+fuera.eq+' bullpen '+fuera.pen+'\n';
+  if(B){
+    txt+='ajuste OLS (w1 anclado 0.65): w2='+num(B[2]*100/(B[1]*100/W1))+
+         ' w3='+num(B[3]*100/(B[1]*100/W1))+
+         ' local='+num((B[0]-0.5)*100/(B[1]*100/W1))+
+         ' mult='+num(B[1]*100/W1,1)+'\n';
+  }
+  var bc=$('copiar');
+  if(bc) bc.addEventListener('click',function(){
+    var m=$('copiado');
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){
+        m.textContent='Copiado. P&eacute;galo en el chat y lo miramos.';
+      },function(){ m.textContent=txt; });
+    }else m.textContent=txt;
+  });
+}
+
+/* ---------- arranque ---------- */
+(function(){
+  var hoy=hoyISO(), y=hoy.slice(0,4);
+  $('fin').value=hoy;
+  $('ini').value=y+'-05-01';
+  $('correr').addEventListener('click',correr);
+  $('borrar').addEventListener('click',function(){
+    var n=0;
+    try{
+      var quitar=[];
+      for(var i=0;i<localStorage.length;i++){
+        var k=localStorage.key(i);
+        if(k&&k.indexOf('bt_')===0) quitar.push(k);
+      }
+      quitar.forEach(function(k){ localStorage.removeItem(k); n++; });
+    }catch(e){}
+    CACHE_OK=true;
+    estado('Cach&eacute; borrado ('+n+' archivos). El pr&oacute;ximo backtest vuelve a bajar todo.');
+  });
+})();
+</script>
+</body>
+</html>
