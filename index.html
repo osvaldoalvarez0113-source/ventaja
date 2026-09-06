@@ -221,7 +221,7 @@ footer summary{font-family:var(--cond);font-size:16px;color:var(--muted);padding
 <body>
 
 <div class="topbar"><div class="inner">
-  <h1 class="brand"><span class="ball">&#9918;</span>Ventaja <span class="ver">v5</span></h1>
+  <h1 class="brand"><span class="ball">&#9918;</span>Ventaja <span class="ver">v6</span></h1>
   <div class="sp"></div>
   <input type="date" id="fecha" style="max-width:170px">
   <button id="cargar">Cargar</button>
@@ -282,6 +282,13 @@ footer summary{font-family:var(--cond);font-size:16px;color:var(--muted);padding
 
   </div>
 </details>
+
+<div class="controls">
+  <button class="ghost" id="kalshi">&#128225; Traer precios de Kalshi</button>
+</div>
+<div id="kstatus" class="leyenda">Con el modo <b>Kalshi</b> puesto en &#9881;&#65039; Ajustes, este bot&oacute;n
+llena solo el precio del ganador de cada juego abierto. El h&aacute;ndicap, el total y los ponches
+siguen a mano: Kalshi no los lista por juego.</div>
 
 <div id="status" class="status">Escoge la fecha y dale a cargar.</div>
 <div id="slate"></div>
@@ -539,11 +546,125 @@ function pagoMod(v,plat){
 function fmtOdds(v,plat){
   return ((plat||PLATA)==='kalshi') ? (Math.round(precioK(v)*100)+'¢') : String(v);
 }
-function ph(book,kal){ return PLATA==='kalshi'?kal:book; }
+function ph(book,kal){ return 'ej. '+(PLATA==='kalshi'?kal:book); }
 function implied(v){
   var n=numOdds(v);
   if(!isFinite(n)||n===0) return null;
   return n<0 ? (-n)/((-n)+100)*100 : 100/(n+100)*100;
+}
+
+/* ---------- Kalshi: precios del ganador ---------- */
+/* Los tickers de Kalshi son tipo kxmlbgame-26jul271910atlnym: fecha, hora y los
+   codigos de visita+local pegados. Aqui el id de equipo de la MLB se traduce a
+   los codigos posibles de Kalshi. Varios equipos se escriben de dos maneras, por
+   eso cada uno lleva lista de alternativas. */
+var KCODE={
+ 109:['ari','az'],   144:['atl'],       110:['bal'],       111:['bos'],
+ 112:['chc'],        145:['chw','cws'], 113:['cin'],       114:['cle'],
+ 115:['col'],        116:['det'],       117:['hou'],       118:['kc','kcr'],
+ 108:['laa','ana'],  119:['lad'],       146:['mia','fla'], 158:['mil'],
+ 142:['min'],        121:['nym'],       147:['nyy'],       133:['ath','oak'],
+ 143:['phi'],        134:['pit'],       135:['sd','sdp'],  136:['sea'],
+ 137:['sf','sfg'],   138:['stl'],       139:['tb','tbr'],  140:['tex'],
+ 141:['tor'],        120:['wsh','was','was']
+};
+var KMKT=null;     /* eventos de Kalshi indexados por par de codigos */
+var KSTAMP=null;   /* cuando se bajaron */
+/* Precio a usar: el ask, que es lo que de verdad pagarias por entrar. Si no hay
+   ask (libro vacio) se cae al ultimo precio negociado, que es peor pero sirve. */
+function kPrecio(m,lado){
+  if(!m) return null;
+  var v=(lado==='no')?m.no_ask:m.yes_ask;
+  if(!v) v=(lado==='no')?(m.last_price!=null?100-m.last_price:null):m.last_price;
+  return (v>0&&v<100)?v:null;
+}
+function kBuscarPar(idA,idH){
+  if(!KMKT) return null;
+  var ca=KCODE[idA]||[], ch=KCODE[idH]||[];
+  for(var i=0;i<ca.length;i++) for(var jj=0;jj<ch.length;jj++){
+    var ev=KMKT[ca[i]+ch[jj]];
+    if(ev) return {ev:ev, ca:ca[i], ch:ch[jj]};
+  }
+  return null;
+}
+/* Devuelve el precio en centavos de cada lado. Si Kalshi solo lista un mercado
+   (el YES de un equipo), el otro lado sale del NO de ese mismo mercado. */
+function kPreciosJuego(idA,idH){
+  var f=kBuscarPar(idA,idH);
+  if(!f) return null;
+  var mA=null,mH=null;
+  f.ev.forEach(function(m){
+    var t=String(m.ticker||'').toLowerCase();
+    if(t.endsWith('-'+f.ca)||t.endsWith(f.ca)) mA=m;
+    if(t.endsWith('-'+f.ch)||t.endsWith(f.ch)) mH=m;
+  });
+  var pa=kPrecio(mA,'yes'), ph2=kPrecio(mH,'yes');
+  if(pa==null&&mH) pa=kPrecio(mH,'no');
+  if(ph2==null&&mA) ph2=kPrecio(mA,'no');
+  if(pa==null&&ph2==null) return null;
+  return {a:pa, h:ph2};
+}
+function kEstado(t,err){
+  var e=$('kstatus'); if(!e) return;
+  e.className='leyenda'+(err?' status err':'');
+  e.innerHTML=t;
+}
+function traerKalshi(){
+  if(PLATA!=='kalshi'){
+    kEstado('⚠️ Est&aacute;s en modo <b>Sportsbook</b>. Los precios de Kalshi vienen en centavos, '+
+            'as&iacute; que cambia arriba a <b>Kalshi</b> en &#9881;&#65039; Ajustes y vuelve a darle.',true);
+    return;
+  }
+  kEstado('Buscando precios en Kalshi&hellip;');
+  var url='https://api.elections.kalshi.com/trade-api/v2/markets'+
+          '?series_ticker=KXMLBGAME&status=open&limit=500';
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(d){
+    var ms=(d&&d.markets)||[];
+    if(!ms.length) throw new Error('sin mercados abiertos');
+    KMKT={};
+    ms.forEach(function(m){
+      var ev=String(m.event_ticker||'').toLowerCase();
+      var par=ev.slice(-6);            /* los 6 ultimos son visita+local */
+      if(par.length!==6) return;
+      (KMKT[par]=KMKT[par]||[]).push(m);
+    });
+    KSTAMP=new Date();
+    var puestos=0, faltan=[];
+    document.querySelectorAll('.game').forEach(function(el){
+      if(!el._d) return;
+      var r=rellenarKalshi(el,true);
+      if(r) puestos++; else faltan.push(el._d.a.team.abbreviation+'@'+el._d.h.team.abbreviation);
+    });
+    var hora=KSTAMP.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+    kEstado('✅ '+ms.length+' mercados de Kalshi le&iacute;dos a las '+hora+'. '+
+      'Precios puestos en <b>'+puestos+'</b> juego(s) abierto(s).'+
+      (faltan.length?' Sin encontrar: '+esc(faltan.join(', '))+'.':'')+
+      ' Los juegos que abras despu&eacute;s se llenan solos. '+
+      '<b>Solo se llena el ganador</b> &mdash; Kalshi no lista h&aacute;ndicap, total ni ponches por juego.');
+  }).catch(function(e){
+    KMKT=null;
+    kEstado('No se pudieron traer los precios ('+esc(e.message||'bloqueado por el navegador')+'). '+
+      'Puede ser que Kalshi no deje que una p&aacute;gina web la llame directo desde el tel&eacute;fono. '+
+      'Sigue escribiendo las cuotas a mano, que la app funciona igual.',true);
+  });
+}
+/* Rellena el moneyline de un juego. Nunca pisa un valor que tu ya escribiste. */
+function rellenarKalshi(el,forzar){
+  if(PLATA!=='kalshi'||!KMKT||!el._d) return false;
+  var box=el.querySelector('.cmp'); if(!box) return false;
+  var pr=kPreciosJuego(el._d.a.team.id, el._d.h.team.id);
+  if(!pr) return false;
+  var ca=box.querySelector('.ca'), ch=box.querySelector('.ch'), puesto=false;
+  if(ca&&!ca.value&&pr.a!=null){ ca.value=pr.a; puesto=true; }
+  if(ch&&!ch.value&&pr.h!=null){ ch.value=pr.h; puesto=true; }
+  if(puesto){
+    if(ca) ca.dispatchEvent(new Event('input'));
+    if(ch) ch.dispatchEvent(new Event('input'));
+  }
+  return puesto||forzar===undefined?puesto:puesto;
 }
 
 /* ---------- datos ---------- */
@@ -1569,6 +1690,7 @@ function pintar(el){
   body.querySelectorAll('input').forEach(function(i){
     if(i.value!=='') i.dispatchEvent(new Event('input'));
   });
+  rellenarKalshi(el);   /* si ya se bajaron precios de Kalshi, se ponen solos */
 }
 
 function detalle(x){
@@ -1680,8 +1802,9 @@ function detalle(x){
     '<div><b>'+num(T,1)+'</b><span>total esperado</span></div>'+
   '</div>'+
   '<div class="pickbox">'+pick+'</div>'+
-  '<div class="flag">Este veredicto sale solo del modelo. Mete las cuotas más abajo y '+
-  'se recalcula por valor real contra la línea.</div>'+
+  '<div class="leyenda">&#128681; Este veredicto sale <b>solo del modelo</b>, sin mirar el mercado. '+
+  'Baja a &#128176; <b>Compara con el book</b> y escribe las dos cuotas: ah&iacute; se recalcula por valor real '+
+  'contra la l&iacute;nea y aparece el &#127942; Ranking del juego. Las casillas vac&iacute;as muestran un ejemplo en gris.</div>'+
   '<div class="rank" data-juego="'+esc(a.team.abbreviation||a.team.name)+' @ '+
     esc(h.team.abbreviation||h.team.name)+'" data-fecha="'+esc(ymd(x.fecha))+'"></div>'+
   '<h3><span class="ic">📊</span>Los números</h3>'+
@@ -1746,9 +1869,11 @@ function detalle(x){
   contexto(x,pfv,Tbase,T,notaTemp)+
 
   '<h3><span class="ic">🎯</span>Total</h3>'+
+  '<div class="leyenda">&#9997;&#65039; Las casillas est&aacute;n <b>vac&iacute;as</b>: lo gris son ejemplos. '+
+  'Toca cada una y escribe la l&iacute;nea y las dos cuotas de tu book &mdash; sin eso no hay ranking ni veredicto por valor.</div>'+
   '<div class="flag">Total esperado: <b>'+num(T,1)+' carreras</b> (crudo '+num(Tbase,1)+', ajustado por parque, temperatura e innings extra).</div>'+
   '<div class="row" data-tot="'+T.toFixed(3)+'">'+
-    '<label>Línea</label><input type="number" inputmode="decimal" step="0.5" class="tl" placeholder="8.5">'+
+    '<label>Línea</label><input type="number" inputmode="decimal" step="0.5" class="tl" placeholder="ej. 8.5">'+
     '<label>Over</label><input type="text" class="to" placeholder="'+ph('-110','52')+'">'+
     '<label>Under</label><input type="text" class="tu" placeholder="'+ph('-110','52')+'">'+
     '<div class="out"></div></div>'+
@@ -1793,7 +1918,7 @@ function kBloque(nombre,se,rival,abrRival,l5){
     (av.length?'<div class="flag">⚠️ '+av.map(esc).join(' ')+'</div>':'')+
     '<div class="row" data-k="'+lam.toFixed(3)+'" data-n="'+esc(nombre)+'">'+
       '<label>K esperados: '+num(lam,1)+' — línea</label>'+
-      '<input type="number" inputmode="decimal" step="0.5" class="kl" placeholder="5.5">'+
+      '<input type="number" inputmode="decimal" step="0.5" class="kl" placeholder="ej. 5.5">'+
       '<label>Over</label><input type="text" class="ko" placeholder="'+ph('-120','55')+'">'+
       '<label>Under</label><input type="text" class="ku" placeholder="'+ph('+100','48')+'">'+
       '<div class="out"></div></div>';
@@ -2041,6 +2166,7 @@ $('reg_import').addEventListener('click',function(){
 });
 pintarRegistro();
 $('cargar').addEventListener('click',cargar);
+$('kalshi').addEventListener('click',traerKalshi);
 $('limpiar').addEventListener('click',function(){
   cache.hit={};cache.pen={};cache.log={};cache.sea={};cache.mano={};cache.split={};
   cache.quem={};cache.reg={};cache.hist={};cache.off14={};cache.il={};
