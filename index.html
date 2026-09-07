@@ -225,7 +225,7 @@ footer summary{font-family:var(--cond);font-size:16px;color:var(--muted);padding
 <body>
 
 <div class="topbar"><div class="inner">
-  <h1 class="brand"><span class="ball">&#9918;</span>Ventaja <span class="ver">v8</span></h1>
+  <h1 class="brand"><span class="ball">&#9918;</span>Ventaja <span class="ver">v8.1</span></h1>
   <div class="sp"></div>
   <input type="date" id="fecha" style="max-width:170px">
   <button id="cargar">Cargar</button>
@@ -1762,8 +1762,13 @@ function detalle(x){
   var lamH=(T9+dEf)/2, lamA=(T9-dEf)/2;
   if(lamA<0.5){lamA=0.5;} if(lamH<0.5){lamH=0.5;}
 
-  var favPor2 = homeLead ? matriz(lamA,lamH,function(xx,yy){return yy-xx>=2;})
-                         : matriz(lamA,lamH,function(xx,yy){return xx-yy>=2;});
+  /* Los DOS lados del handicap, siempre. Antes solo se calculaba el del favorito
+     segun tu formula; cuando el mercado lista el handicap del otro lado no habia
+     donde meter ese precio y terminaba copiado en la casilla equivocada, lo que
+     inventaba ventaja donde no habia. */
+  var aPor2 = matriz(lamA,lamH,function(xx,yy){return xx-yy>=2;});   /* visita gana por 2+ */
+  var hPor2 = matriz(lamA,lamH,function(xx,yy){return yy-xx>=2;});   /* local gana por 2+ */
+  var favPor2 = homeLead ? hPor2 : aPor2;
   var dogMas15 = 1-favPor2;
   var pEmp=matriz(lamA,lamH,function(xx,yy){return xx===yy;});
   var pPoisH=(matriz(lamA,lamH,function(xx,yy){return yy>xx;})+pEmp/2)*100;
@@ -1846,19 +1851,33 @@ function detalle(x){
 
   '<h3><span class="ic">⚖️</span>Hándicap</h3>'+
   '<table>'+
-  '<tr><td>'+abrGana+' −1.5 (gana por 2+)</td><td class="n">'+pc(favPor2)+'</td><td class="n">'+american(favPor2*100)+'</td></tr>'+
-  '<tr><td>'+abrPierde+' +1.5</td><td class="n">'+pc(dogMas15)+'</td><td class="n">'+american(dogMas15*100)+'</td></tr>'+
+  '<tr><th>Proposición</th><th>Prob.</th><th>Justa</th></tr>'+
+  '<tr><td>'+nomA+' −1.5 (gana por 2+)</td><td class="n">'+pc(aPor2)+'</td><td class="n">'+american(aPor2*100)+'</td></tr>'+
+  '<tr><td>'+nomH+' +1.5</td><td class="n">'+pc(1-aPor2)+'</td><td class="n">'+american((1-aPor2)*100)+'</td></tr>'+
+  '<tr><td>'+nomH+' −1.5 (gana por 2+)</td><td class="n">'+pc(hPor2)+'</td><td class="n">'+american(hPor2*100)+'</td></tr>'+
+  '<tr><td>'+nomA+' +1.5</td><td class="n">'+pc(1-hPor2)+'</td><td class="n">'+american((1-hPor2)*100)+'</td></tr>'+
   '<tr><td>Ganador según este Poisson</td><td class="n" colspan="2">'+pPoisH.toFixed(1)+'% al local</td></tr>'+
   (brecha>=4?'<tr><td>Se separa de tu fórmula en</td><td class="n" colspan="2">'+brecha.toFixed(1)+' puntos</td></tr>':'')+
   '</table>'+
+  '<div class="leyenda">⚠️ Están los <b>cuatro</b> lados a propósito. Kalshi y los books listan el hándicap '+
+  'solo del lado de <b>su</b> favorito, que no siempre es el tuyo. Antes de copiar un precio, lee bien de '+
+  'cuál de las cuatro filas es: meter el precio de un lado en la casilla del otro fabrica ventaja que no existe. '+
+  'En Kalshi, «X gana por más de 1.5» es la fila <b>X −1.5</b>, y el «No» de ese mismo contrato es la fila '+
+  '<b>del rival +1.5</b>.</div>'+
   (brecha>=4?'<div class="flag">⚠️ El hándicap sale del Poisson y el ganador sale de tu fórmula, y aquí se separan '+
     brecha.toFixed(1)+' puntos. Los dos no pueden tener razón a la vez: si juegas el hándicap en este partido, hazlo con medio stake.</div>':'')+
-  '<div class="row" data-hc="1" data-pf="'+(favPor2*100).toFixed(3)+'" data-pd="'+(dogMas15*100).toFixed(3)+
-    '" data-nf="'+abrGana+'" data-nd="'+abrPierde+'">'+
-    '<label>'+abrGana+' −1.5</label><input type="text" class="hf" placeholder="'+ph('+175','36')+'">'+
-    '<label>'+abrPierde+' +1.5</label><input type="text" class="hd" placeholder="'+ph('-175','64')+'">'+
+  '<div class="row" data-hc="1" data-pf="'+(aPor2*100).toFixed(3)+'" data-pd="'+((1-aPor2)*100).toFixed(3)+
+    '" data-nf="'+nomA+'" data-nd="'+nomH+'">'+
+    '<label>'+nomA+' −1.5</label><input type="text" class="hf" placeholder="'+ph('+175','36')+'">'+
+    '<label>'+nomH+' +1.5</label><input type="text" class="hd" placeholder="'+ph('-175','64')+'">'+
     '<div class="out"></div></div>'+
-  '<div class="flag">Recuerda tu equivalencia de Kalshi: el +1.5 del underdog es el "No" al contrato de que el favorito gana por más de 1.5.</div>'+
+  '<div class="row" data-hc="1" data-pf="'+(hPor2*100).toFixed(3)+'" data-pd="'+((1-hPor2)*100).toFixed(3)+
+    '" data-nf="'+nomH+'" data-nd="'+nomA+'">'+
+    '<label>'+nomH+' −1.5</label><input type="text" class="hf" placeholder="'+ph('+175','36')+'">'+
+    '<label>'+nomA+' +1.5</label><input type="text" class="hd" placeholder="'+ph('-175','64')+'">'+
+    '<div class="out"></div></div>'+
+  '<div class="flag">Llena solo la fila que tu casa liste. Las dos filas son mercados distintos, no dos '+
+  'maneras de ver el mismo: si te aparecen las dos con valor, hay un precio mal copiado.</div>'+
   '<div class="flag">Si el favorito es el local, este número viene algo optimista: el local no batea el noveno cuando va ganando.</div>'+
 
   '<h3><span class="ic">🏟️</span>Contexto del parque</h3>'+
