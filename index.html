@@ -26,7 +26,6 @@ body{margin:0;color:var(--chalk);font-family:var(--body);font-size:15px;line-hei
  padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
 .wrap{max-width:600px;margin:0 auto;padding:0 14px}
 
-/* ---------- barra superior ---------- */
 .topbar{position:sticky;top:0;z-index:20;
  background:rgba(8,22,31,.92);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
  border-bottom:1px solid var(--line);
@@ -42,7 +41,6 @@ body{margin:0;color:var(--chalk);font-family:var(--body);font-size:15px;line-hei
 header.hero{padding:16px 0 4px}
 header.hero p{margin:0;color:var(--muted);font-size:13px;max-width:46ch}
 
-/* ---------- controles ---------- */
 .controls{display:flex;gap:8px;align-items:center;margin:14px 0 10px;flex-wrap:wrap}
 input[type=date],input[type=number],input[type=text],select{
  background:var(--panel);border:1px solid var(--line);color:var(--chalk);
@@ -56,11 +54,11 @@ button{background:linear-gradient(180deg,var(--signal2),var(--signal));color:#12
  border-radius:var(--r);padding:11px 18px;font-family:var(--cond);font-weight:700;font-size:18px;
  letter-spacing:.3px;cursor:pointer;box-shadow:0 1px 0 rgba(255,255,255,.25) inset}
 button:active{transform:translateY(1px)}
+button:disabled{opacity:.45}
 button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);
  font-weight:600;box-shadow:none}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 
-/* panel de ajustes plegable */
 .ajustes{background:var(--panel);border:1px solid var(--line);border-radius:var(--r2);
  margin-bottom:12px;overflow:hidden}
 .ajustes>summary{font-family:var(--cond);font-size:17px;font-weight:600;color:var(--chalk);
@@ -79,7 +77,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .status.err{color:var(--bad);background:rgba(210,104,95,.1);border:1px solid rgba(210,104,95,.3);
  border-radius:var(--r);padding:11px 12px}
 
-/* ---------- tarjeta de juego ---------- */
 .game{background:var(--night2);border:1px solid var(--line);border-radius:var(--r2);
  margin:10px 0;overflow:hidden;transition:border-color .2s}
 .game.open{border-color:var(--line2)}
@@ -97,7 +94,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .body{display:none;padding:0 14px 16px}
 .game.open .body{display:block}
 
-/* ---------- barra de probabilidad ---------- */
 .bar{height:42px;display:flex;border-radius:var(--r);overflow:hidden;background:var(--panel);
  margin:2px 0 12px;border:1px solid var(--line)}
 .bar span{display:flex;align-items:center;font-family:var(--cond);font-size:19px;font-weight:700;
@@ -105,7 +101,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .bar .lead{background:linear-gradient(180deg,var(--signal2),var(--signal));color:#12242F}
 .bar .trail{background:var(--panel);color:var(--muted);justify-content:flex-end}
 
-/* ---------- chips de resumen ---------- */
 .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
 .kpi div{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
  padding:9px 10px;text-align:center}
@@ -114,13 +109,11 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .kpi span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;
  display:block;margin-top:2px}
 
-/* ---------- secciones ---------- */
 h3{font-family:var(--cond);font-size:20px;font-weight:600;margin:24px 0 6px;
  padding:0 0 7px 0;border-bottom:1px solid var(--line);
  display:flex;align-items:center;gap:8px;letter-spacing:.3px}
 h3 .ic{font-size:16px;filter:saturate(.9)}
 
-/* ---------- tablas ---------- */
 table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 4px}
 td,th{padding:8px 0;text-align:right;border-bottom:1px solid rgba(31,68,87,.6)}
 th:first-child,td:first-child{text-align:left;color:var(--muted);font-weight:400;
@@ -142,7 +135,6 @@ details summary::-webkit-details-marker{display:none}
 details summary:before{content:'▸ ';color:var(--muted2)}
 details[open] summary:before{content:'▾ '}
 
-/* ---------- desglose ---------- */
 .calc{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
  padding:13px;margin:12px 0;font-size:13px;color:var(--muted)}
 .calc div{display:flex;justify-content:space-between;gap:12px;padding:4px 0}
@@ -150,7 +142,6 @@ details[open] summary:before{content:'▾ '}
  font-variant-numeric:tabular-nums}
 .calc .tot{border-top:1px solid var(--line2);margin-top:7px;padding-top:9px;color:var(--chalk)}
 
-/* ---------- veredicto ---------- */
 .pick{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--signal);
  border-radius:var(--r);padding:12px 14px;margin:12px 0 8px}
 .pick .q{font-family:var(--cond);font-size:25px;font-weight:700;line-height:1.12;
@@ -167,7 +158,6 @@ details[open] summary:before{content:'▾ '}
  border-radius:var(--r);padding:9px 11px;margin:8px 0}
 .leyenda b{color:var(--muted);font-weight:600}
 
-/* ---------- filas de cuotas ---------- */
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0;
  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px}
 .row input{width:92px}
@@ -178,10 +168,9 @@ details[open] summary:before{content:'▾ '}
 .out.no{color:var(--bad)}
 .lu-out{font-family:var(--body);font-size:13px}
 
-/* ---------- manual y registro ---------- */
-.manual,.registro{margin-top:28px;border-top:1px solid var(--line);padding-top:18px}
-.manual h2,.registro h2{font-family:var(--cond);font-size:25px;margin:0 0 4px;font-weight:700;
- display:flex;align-items:center;gap:8px}
+.manual,.registro,.gane{margin-top:28px;border-top:1px solid var(--line);padding-top:18px}
+.manual h2,.registro h2,.gane h2{font-family:var(--cond);font-size:25px;margin:0 0 4px;
+ font-weight:700;display:flex;align-items:center;gap:8px}
 .grid{display:grid;grid-template-columns:1fr 82px 82px;gap:8px;align-items:center;margin-top:12px}
 .grid span{font-size:13px;color:var(--muted)}
 .grid input{width:100%}
@@ -206,6 +195,21 @@ details[open] summary:before{content:'▾ '}
 .tarj .g b{color:var(--good)}
 .tarj .p b{color:var(--bad)}
 
+/* ---------- modo al gane ---------- */
+.fila{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);
+ border-radius:var(--r);padding:10px 12px;margin:7px 0}
+.fila .pos{font-family:var(--cond);font-size:19px;color:var(--muted2);width:22px;flex:0 0 22px}
+.fila .txt{flex:1;min-width:0}
+.fila .txt b{font-family:var(--cond);font-size:19px;font-weight:600;display:block;line-height:1.15}
+.fila .txt span{font-size:12px;color:var(--muted);display:block;margin-top:2px}
+.fila .pct{font-family:var(--cond);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;
+ text-align:right}
+.fila .pct em{display:block;font-style:normal;font-size:11px;color:var(--muted);font-weight:400}
+.fila input[type=checkbox]{width:22px;height:22px;accent-color:var(--signal);flex:0 0 22px}
+.fila.alto{border-color:rgba(95,176,122,.5)}
+.fila.alto .pct{color:var(--good)}
+.fila.gris{opacity:.6}
+
 footer{color:var(--muted2);font-size:11.5px;padding:26px 0 0;line-height:1.65;
  border-top:1px solid var(--line);margin-top:28px}
 footer b{color:var(--muted)}
@@ -221,7 +225,7 @@ footer summary{font-family:var(--cond);font-size:16px;color:var(--muted);padding
 <body>
 
 <div class="topbar"><div class="inner">
-  <h1 class="brand"><span class="ball">&#9918;</span>Ventaja <span class="ver">v7</span></h1>
+  <h1 class="brand"><span class="ball">&#9918;</span>Ventaja <span class="ver">v8</span></h1>
   <div class="sp"></div>
   <input type="date" id="fecha" style="max-width:170px">
   <button id="cargar">Cargar</button>
@@ -253,7 +257,8 @@ footer summary{font-family:var(--cond);font-size:16px;color:var(--muted);padding
     <div class="modo">
       <label for="mult">&#128200; Carreras &rarr; porcentaje</label>
       <select id="mult">
-        <option value="13" selected>&times; 13 &mdash; lo que da la matem&aacute;tica</option>
+        <option value="6" selected>&times; 6 &mdash; lo que dio el backtest</option>
+        <option value="13">&times; 13 &mdash; el te&oacute;rico de Poisson</option>
         <option value="17">&times; 17 &mdash; tu n&uacute;mero original</option>
       </select>
     </div>
@@ -284,6 +289,7 @@ footer summary{font-family:var(--cond);font-size:16px;color:var(--muted);padding
 </details>
 
 <div class="controls">
+  <button class="ghost" id="algane_btn">&#127942; Ranking al gane</button>
   <button class="ghost" id="kalshi">&#128225; Traer precios de Kalshi</button>
 </div>
 <div id="kstatus" class="leyenda">Con el modo <b>Kalshi</b> puesto en &#9881;&#65039; Ajustes, este bot&oacute;n
@@ -293,6 +299,14 @@ ponches siguen a mano: Kalshi no los lista por juego.</div>
 
 <div id="status" class="status">Escoge la fecha y dale a cargar.</div>
 <div id="slate"></div>
+
+<div class="gane" id="gane_zona" style="display:none">
+  <h2><span class="ic">🏆</span>Al gane</h2>
+  <p class="flag">Todos los juegos del d&iacute;a ordenados por probabilidad pura, sin mirar cuota.
+  Marca dos o tres para ver qu&eacute; tendr&iacute;a que pagarte una combinada.</p>
+  <div id="algane"></div>
+  <div id="combibox"></div>
+</div>
 
 <div class="manual">
   <h2><span class="ic">✏️</span>Cálculo a mano</h2>
@@ -329,8 +343,22 @@ ponches siguen a mano: Kalshi no los lista por juego.</div>
   mercados cuentan la misma historia. El total usa la misma tabla de park factors y la misma amortiguación al 60% que contexto_juego.py de Betbot,
   más la temperatura real de Open-Meteo a la hora del juego. Si metes tu banca arriba, cada mercado con valor te sugiere el stake con un cuarto de Kelly, la misma
   fracción que usa Betbot. El hándicap se calcula sobre nueve innings; las carreras de extras solo entran
-  al total. El multiplicador de carreras a porcentaje viene por defecto en ×13, que es lo que dan Poisson y Pythagorean
-  para una diferencia de carreras dada; ×17 era el número original y se puede escoger arriba para comparar.
+  al total.
+
+  <b>El multiplicador de carreras a porcentaje viene por defecto en ×6, y ese número no es teórico: sale
+  de correr esta misma fórmula sobre 3,077 juegos terminados de 2025 y 2026.</b> El ×13 que traía antes
+  inflaba el porcentaje de forma sistemática: en el backtest, cuando el modelo decía 70% ganaba 60%, y
+  como el EV, la cuota justa y el Kelly salen todos del porcentaje, ese error se propagaba a todo. Con ×6
+  el Brier baja de 0.2507 a 0.2459 en 2025 y de 0.2485 a 0.2452 en 2026 — las dos temporadas pidieron lo
+  mismo. Se dejan ×13 y ×17 arriba para comparar, pero el número medido es el 6. Ojo a lo que eso
+  significa: la app ahora saca muchísimos menos picks, y eso no es que se dañó, es que antes gritaba más
+  de lo que sabía.
+
+  También se probaron y se descartaron tres cambios más, porque ayudaron en una temporada y estorbaron en
+  la otra: subir el peso de la ofensiva a 0.80, sacar la localía de lo que va de temporada en vez del 0.12
+  fijo, y usar K-BB% en lugar del ERA para medir al abridor. Ninguno se sostuvo en las dos. Los pesos
+  0.65 / 0.50 / 0.25 y el 0.12 de localía se quedan como estaban.
+
   Al total se le suman 0.18 carreras por los innings extra, que ocurren en cerca de uno de cada once juegos y
   el modelo de nueve innings no cuenta. El bullpen quemado se mide contra la fecha oficial local del juego. Los venue_id de la tabla de parques están verificados uno por uno contra /api/v1/teams?sportId=1 de la MLB; el nombre del estadio que se muestra viene siempre de la API, no de la tabla, para que un id mal puesto se note enseguida.
   Las carreras esperadas de cada equipo salen de multiplicar su ofensiva por lo que permite el staff rival
@@ -340,6 +368,12 @@ ponches siguen a mano: Kalshi no los lista por juego.</div>
   Los splits L/R escalan las carreras por juego con tope de ±10%. El bullpen quemado usa los mismos
   escalones que ajustar_ml() de Betbot: −2 puntos si dos o más relevistas lanzaron dos días seguidos,
   −1 si fue uno, o si tres o más lanzaron ayer. FIP = (13·HR + 3·(BB+HBP) − 2·K) ÷ IP + 3.15.
+
+  Los cortes del veredicto van por <b>ventaja en carreras</b> y no por porcentaje, porque las carreras no
+  cambian cuando cambias el multiplicador: bajo 0.50 no hay pick, de 0.50 a 1.20 es zona gris, de 1.20 a
+  1.70 es ventaja sólida y sobre 1.70 es gran oportunidad. Esos cortes salen del backtest: con ×6, el único
+  tramo donde el modelo entregó lo que prometía fue el de 60% para arriba, que es justo 1.70 carreras.
+
   Cuando metes las dos cuotas del ganador, la app le quita el vigorish al mercado (los dos porcentajes
   implícitos suman más de 100 porque ahí va la comisión de la casa; se normalizan a 100) y el veredicto
   se recalcula por valor contra la línea en vez de por probabilidad sola: un 64% pagado a −200 es una
@@ -359,11 +393,19 @@ ponches siguen a mano: Kalshi no los lista por juego.</div>
   3. Esa comisión se resta entera del EV y del Kelly porque se paga ganes, pierdas o empates.
   Cada pick guardado recuerda en qué plataforma lo tomaste, así que el CLV y las unidades se
   calculan con las reglas correctas aunque mezcles los dos.
+
+  El <b>modo Al gane</b> ordena todos los juegos del día por probabilidad pura, ignorando la cuota. Sirve
+  cuando no estás buscando valor sino el juego más probable. La calculadora de combinada multiplica las
+  probabilidades de lo que marques y te dice la cuota justa. Léela con cuidado: en el backtest de 2025,
+  863 pares de picks de 60%+ ganaron los dos el 40.7% de las veces, contra el 39.1% que da simplemente
+  multiplicar. O sea que combinar no aporta nada extra — solo hace la apuesta más difícil y te cobra la
+  comisión dos veces. Con un vig de 4.5% por pata, una sencilla bien pagada te deja −4.5% por dólar y un
+  par te deja −8.8%.
+
   Los picks se guardan solo en este teléfono, sin cuenta ni servidor; si borras los datos del
   navegador se van, por eso está el botón de respaldo. El CLV compara el implícito de la cuota que
   tomaste contra el implícito de la cuota de cierre del mismo lado: si cerró más corta que la tuya,
-  le ganaste al mercado. Lleva la comisión de la casa en los dos números, así que se cancela casi
-  toda al restar. La calibración agrupa tus picks por el porcentaje que les diste y compara lo que
+  le ganaste al mercado. La calibración agrupa tus picks por el porcentaje que les diste y compara lo que
   dijiste contra lo que pasó: si llamas 60% y ganas 45%, tu modelo viene inflado.
   El <b>Ranking del juego</b> ordena por EV todas las proposiciones en las que metiste cuota
   (ganador, hándicap, total y ponches de cada abridor): es el orden matemático puro, cuál paga
@@ -372,16 +414,14 @@ ponches siguen a mano: Kalshi no los lista por juego.</div>
   Los mercados de un mismo juego están correlacionados, así que jugar dos del ranking no diversifica.
   El tope del porcentaje es 22–78%, el rango real de un moneyline de MLB; si un juego lo toca,
   el moneyline sale del ranking porque comparar un número recortado contra la cuota inventa ventaja.
-  Los ERA regresan hacia el FIP del propio pitcher cuando lo tiene, no hacia el promedio de la liga:
-  anclar a la liga aplastaba a los ases contra la media y empujaba todos los juegos hacia el 50%.
+  Los ERA regresan hacia el FIP del propio pitcher cuando lo tiene, no hacia el promedio de la liga.
   La proyección de ponches usa innings y K de aperturas solamente: si el abridor ha tirado en relevo,
-  dividir sus innings totales entre sus aperturas infla el número. Los ERA se ajustan por tamaño de muestra: un pitcher con pocos innings se jala hacia el promedio de la liga, para que una sola salida mala no rompa el cálculo.
+  dividir sus innings totales entre sus aperturas infla el número. Los ERA se ajustan por tamaño de muestra.
   La ofensiva de los últimos 14 días entra al cálculo mezclada 70/30 con la de temporada, igual que el ERA;
   se puede apagar arriba. Todo lo que está bajo «Forma y récord» —récord de temporada, últimos 5 juegos,
-  racha y las salidas del abridor— es contexto para tus ojos y no toca el número: el récord W-L de un pitcher
-  mide el apoyo de su ofensiva y de su bullpen, no cómo tiró, y las rachas de equipo se rompen solas.
+  racha y las salidas del abridor— es contexto para tus ojos y no toca el número.
   El ERA de bullpen de los últimos días sale de los boxscores de los cuatro días anteriores y también es
-  informativo: el ajuste al porcentaje ya lo hace la regla de bullpen quemado, meterlo dos veces sería contarlo doble.
+  informativo: el ajuste al porcentaje ya lo hace la regla de bullpen quemado.
 
 </details>
 </footer>
@@ -397,17 +437,19 @@ var K_LIGA=null;
 var LIGA_ERA=null;
 var LIGA_RG=null;
 var STAND=null;
-var LIGA_YEAR=null;   /* los promedios de liga son de un ano concreto */
-var PLATA='book';     /* book = cuota americana | kalshi = precio del contrato */
-var LIMPIAR=false;    /* al cambiar de plataforma las cuotas viejas no sirven */
-/* Kalshi cobra 0.07 x C x P x (1-P) por contrato al entrar. Como lo que pones por
-   contrato es P, la comision sale al 0.07 x (1-P) de lo que arriesgas. En un
-   contrato de 50c son 3.5 puntos: se come una ventaja de 3 puntos entera. */
+var LIGA_YEAR=null;
+var PLATA='book';
+var LIMPIAR=false;
 var KFEE=0.07;
-var MULT=13;
-var EXTRAS=0.18;  /* carreras que aportan los innings extra */
-/* Park factors por venue_id — misma tabla que contexto_juego.py de Betbot.
-   [nombre, factor, techo]. techo: abierto | retractil | techo (cerrado fijo). */
+/* Multiplicador de carreras a porcentaje. El 6 sale del backtest sobre 3,077 juegos
+   de 2025 y 2026: el 13 que traia antes inflaba el porcentaje de forma sistematica. */
+var MULT=6;
+var EXTRAS=0.18;
+/* Cortes del veredicto, en CARRERAS de ventaja. Se usan carreras y no porcentaje
+   porque las carreras no cambian al cambiar el multiplicador. */
+var CORTE_GRIS=0.50, CORTE_SOLIDO=1.20, CORTE_FUERTE=1.70;
+var ULTIMO=null;   /* numeros del ultimo detalle() pintado, para el modo Al gane */
+
 var PARK={
  19:   ['Coors Field',1.28,'abierto'],
  3313: ['Yankee Stadium',1.05,'abierto'],
@@ -440,14 +482,12 @@ var PARK={
  2529: ['Sutter Health Park',0.96,'abierto'],
  12:   ['Tropicana Field',0.96,'techo']
 };
-/* Igual que ajustar_total() en Betbot: solo se aplica el 60% del ajuste bruto. */
 var SUAVE=0.6;
 
 /* ---------- probabilidad ---------- */
 function pmf(k,l){ if(l<=0) return k===0?1:0; var p=Math.exp(-l); for(var i=1;i<=k;i++) p=p*l/i; return p; }
 function cdf(k,l){ var s=0; for(var i=0;i<=k;i++) s+=pmf(i,l); return s; }
 function pOver(linea,l){
-  // P(marca MAS que la linea)
   var piso=Math.floor(linea);
   if(Math.abs(linea-piso)<1e-9) return {over:1-cdf(piso,l), push:pmf(piso,l), under:cdf(piso-1,l)};
   return {over:1-cdf(piso,l), push:0, under:cdf(piso,l)};
@@ -464,9 +504,6 @@ function ventaja(d){
   var p1=(d.eraA-d.eraH)*0.65, p2=(d.rgH-d.rgA)*0.5, p3=(d.bpA-d.bpH)*0.25;
   var delta=p1+p2+p3+0.12;
   var pct=50+delta*MULT;
-  /* Tope amplio: 78/22 cubre el rango real de un moneyline de MLB (hasta -350).
-     El de 68 anterior recortaba favoritos legitimos y, al comparar contra la cuota,
-     eso fabricaba "valor" en el underdog que no existia. */
   var capped=pct>78||pct<22;
   pct=Math.max(22,Math.min(78,pct));
   return {p1:p1,p2:p2,p3:p3,delta:delta,pct:pct,capped:capped};
@@ -478,21 +515,17 @@ function american(p){
 }
 function banca(){ var v=parseFloat(($('banca')||{}).value); return isFinite(v)&&v>0?v:null; }
 function decimal(am){ return am>0 ? am/100 : 100/(-am); }
-/* pushPct: probabilidad de empate en la linea (solo en lineas enteras: total 8.0,
-   ponches 5.0). El empate devuelve el dinero, no lo pierde — tratarlo como derrota
-   subestima el valor del Under. */
 function valor(pPct,amStr,pushPct,plat){
   var imp=impMod(amStr,plat); if(imp==null) return null;
   var pg=pagoMod(amStr,plat); if(!pg) return null;
   var p=pPct/100, push=(pushPct||0)/100;
-  var q=Math.max(0,1-p-push);        /* pierde de verdad */
-  /* La comision se paga entres o no: gane, pierda o empate. Por eso resta entera. */
-  var ev=p*pg.b-q-pg.fee;            /* por cada dolar arriesgado */
+  var q=Math.max(0,1-p-push);
+  var ev=p*pg.b-q-pg.fee;
   var bn=pg.b-pg.fee, ln=1+pg.fee;
-  var f=bn>0?(p*bn-q*ln)/bn:0;       /* Kelly completo, con push y comision */
+  var f=bn>0?(p*bn-q*ln)/bn:0;
   var bk=banca();
   return {imp:imp, ventaja:(p-imp/100)*100, ev:ev, kelly:f, push:push*100, fee:pg.fee*100,
-          stake: (bk&&f>0)? bk*f*0.25 : null};   /* cuarto de Kelly, como Betbot */
+          stake: (bk&&f>0)? bk*f*0.25 : null};
 }
 function txtValor(etiqueta,pPct,amStr,pushPct){
   var v=valor(pPct,amStr,pushPct);
@@ -502,8 +535,6 @@ function txtValor(etiqueta,pPct,amStr,pushPct){
   if(v.stake) t+=' · ¼ Kelly $'+v.stake.toFixed(2);
   return {ok:true, t:t};
 }
-/* Quita el vigorish: la suma de los dos implicitos pasa de 103% a 100%.
-   Sin esto comparas tu numero contra un porcentaje inflado por la comision. */
 function devig(amA,amH){
   var ia=impMod(amA), ih=impMod(amH);
   if(ia==null||ih==null) return null;
@@ -511,10 +542,7 @@ function devig(amA,amH){
   if(s<=0) return null;
   return {impA:ia, impH:ih, sum:s, fairA:ia/s*100, fairH:ih/s*100, vig:s-100};
 }
-/* EV por cada dolar apostado, contra la cuota REAL que te pagan (con vig). */
-function evUnit(p,am){ var b=decimal(am); return p*b-(1-p); }   /* sin push: moneyline */
-/* El iPhone mete guion largo o menos tipografico segun el teclado, y parseFloat
-   devuelve NaN con esos. Se normalizan antes de leer cualquier cuota. */
+function evUnit(p,am){ var b=decimal(am); return p*b-(1-p); }
 function numOdds(v){
   if(v==null) return NaN;
   return parseFloat(String(v)
@@ -522,19 +550,16 @@ function numOdds(v){
     .replace(/[\uFF0B]/g,'+')
     .replace(/[\s,]/g,''));
 }
-/* Acepta 58, 58c o 0.58 y devuelve 0.58. */
 function precioK(v){
   var c=numOdds(v);
   if(!isFinite(c)) return null;
   if(c>=1&&c<100) c=c/100;
   return (c>0&&c<1)?c:null;
 }
-/* Probabilidad implicita segun la plataforma. En Kalshi el precio ES la probabilidad. */
 function impMod(v,plat){
   if((plat||PLATA)==='kalshi'){ var c=precioK(v); return c==null?null:c*100; }
   return implied(v);
 }
-/* Ganancia por cada dolar arriesgado, y comision como fraccion de lo arriesgado. */
 function pagoMod(v,plat){
   if((plat||PLATA)==='kalshi'){
     var c=precioK(v); if(c==null) return null;
@@ -554,11 +579,7 @@ function implied(v){
   return n<0 ? (-n)/((-n)+100)*100 : 100/(n+100)*100;
 }
 
-/* ---------- Kalshi: precios del ganador ---------- */
-/* Los tickers de Kalshi son tipo kxmlbgame-26jul271910atlnym: fecha, hora y los
-   codigos de visita+local pegados. Aqui el id de equipo de la MLB se traduce a
-   los codigos posibles de Kalshi. Varios equipos se escriben de dos maneras, por
-   eso cada uno lleva lista de alternativas. */
+/* ---------- Kalshi ---------- */
 var KCODE={
  109:['ari','az'],   144:['atl'],       110:['bal'],       111:['bos'],
  112:['chc'],        145:['chw','cws'], 113:['cin'],       114:['cle'],
@@ -567,12 +588,10 @@ var KCODE={
  142:['min'],        121:['nym'],       147:['nyy'],       133:['ath','oak'],
  143:['phi'],        134:['pit'],       135:['sd','sdp'],  136:['sea'],
  137:['sf','sfg'],   138:['stl'],       139:['tb','tbr'],  140:['tex'],
- 141:['tor'],        120:['wsh','was','was']
+ 141:['tor'],        120:['wsh','was']
 };
-var KMKT=null;     /* eventos de Kalshi indexados por par de codigos */
-var KSTAMP=null;   /* cuando se bajaron */
-/* Precio a usar: el ask, que es lo que de verdad pagarias por entrar. Si no hay
-   ask (libro vacio) se cae al ultimo precio negociado, que es peor pero sirve. */
+var KMKT=null;
+var KSTAMP=null;
 function kPrecio(m,lado){
   if(!m) return null;
   var v=(lado==='no')?m.no_ask:m.yes_ask;
@@ -588,8 +607,6 @@ function kBuscarPar(idA,idH){
   }
   return null;
 }
-/* Devuelve el precio en centavos de cada lado. Si Kalshi solo lista un mercado
-   (el YES de un equipo), el otro lado sale del NO de ese mismo mercado. */
 function kPreciosJuego(idA,idH){
   var f=kBuscarPar(idA,idH);
   if(!f) return null;
@@ -610,10 +627,6 @@ function kEstado(t,err){
   e.className='leyenda'+(err?' status err':'');
   e.innerHTML=t;
 }
-/* Kalshi no manda las cabeceras que el navegador exige para llamarla desde otra
-   pagina (por eso salia "Load failed"). Se prueba primero directo, por si algun
-   dia lo permiten, y si no se pasa por un relevo publico que si las manda.
-   Son datos publicos de mercado, no va nada tuyo en la peticion. */
 var KURL='https://api.elections.kalshi.com/trade-api/v2/markets'+
          '?series_ticker=KXMLBGAME&status=open&limit=500';
 var RELEVOS=[
@@ -624,7 +637,7 @@ var RELEVOS=[
 ];
 function pedirKalshi(i){
   i=i||0;
-  if(i>=RELEVOS.length) return Promise.reject(new Error('ninguna v&iacute;a funcion&oacute;'));
+  if(i>=RELEVOS.length) return Promise.reject(new Error('ninguna vía funcionó'));
   var via=RELEVOS[i];
   if(i>0) kEstado('Directo no se pudo. Probando por relevo <b>'+via.n+'</b>&hellip;');
   return fetch(via.f(KURL)).then(function(r){
@@ -649,7 +662,7 @@ function traerKalshi(){
     KMKT={};
     ms.forEach(function(m){
       var ev=String(m.event_ticker||'').toLowerCase();
-      var par=ev.slice(-6);            /* los 6 ultimos son visita+local */
+      var par=ev.slice(-6);
       if(par.length!==6) return;
       (KMKT[par]=KMKT[par]||[]).push(m);
     });
@@ -674,7 +687,6 @@ function traerKalshi(){
       'Sigue escribiendo las cuotas a mano, que la app funciona igual de bien.',true);
   });
 }
-/* Rellena el moneyline de un juego. Nunca pisa un valor que tu ya escribiste. */
 function rellenarKalshi(el,forzar){
   if(PLATA!=='kalshi'||!KMKT||!el._d) return false;
   var box=el.querySelector('.cmp'); if(!box) return false;
@@ -687,14 +699,11 @@ function rellenarKalshi(el,forzar){
     if(ca) ca.dispatchEvent(new Event('input'));
     if(ch) ch.dispatchEvent(new Event('input'));
   }
-  return puesto||forzar===undefined?puesto:puesto;
+  return puesto;
 }
 
 /* ---------- datos ---------- */
 function j(url){ return fetch(url).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }); }
-/* Un boxscore completo pesa cientos de KB y de ahi solo se usan cinco campos.
-   Con ?fields= la MLB devuelve solo lo pedido; si el filtro no trae nada util,
-   se recae al boxscore entero para no romper nada. */
 var BOX_FIELDS='teams,home,away,team,id,players,person,fullName,stats,pitching,'+
                'inningsPitched,earnedRuns,gamesStarted,battingOrder';
 function boxscore(pk){
@@ -733,8 +742,6 @@ function ultimas5(id,year){
               dec:(+(s.stat.wins||0)?'G':(+(s.stat.losses||0)?'P':'ND')),
               opp:(s.opponent&&(s.opponent.abbreviation||s.opponent.name))||''};
     });
-    /* IP y K contando SOLO aperturas: si el pitcher tiro algun relevo,
-       dividir innings totales entre aperturas infla la proyeccion de ponches. */
     var aIP=0, aK=0, aN=0;
     sal.forEach(function(s){ aIP+=ipToNum(s.stat.inningsPitched); aK+=+(s.stat.strikeOuts||0); aN++; });
     var out={era: ip>0?er*9/ip:null, ip:ip, n:use.length, starts:starts,
@@ -775,8 +782,6 @@ function ofensiva(teamId,year){
     cache.hit[k]=out; return out;
   }).catch(function(){ return {rg:null,g:0,kpct:null,ops:null}; });
 }
-/* Ofensiva de los ultimos 14 dias. Captura al equipo caliente o al apagado,
-   cosa que el promedio de temporada tarda meses en reflejar. */
 function ofensiva14(teamId,baseDate,year){
   var k=teamId+'-'+ymd(baseDate);
   if(cache.off14[k]) return Promise.resolve(cache.off14[k]);
@@ -818,7 +823,6 @@ function ligaEra(year){
     return LIGA_ERA;
   }).catch(function(){ LIGA_ERA=4.10; return LIGA_ERA; });
 }
-/* Una sola llamada trae el record y la racha de los 30 equipos. */
 function standings(year){
   if(STAND) return Promise.resolve(STAND);
   return j(API+'/standings?leagueId=103,104&season='+year+'&standingsTypes=regularSeason').then(function(d){
@@ -856,14 +860,10 @@ function splitEquipo(teamId,m,year){
 }
 function ymd(dt){ var p=function(n){return String(n).padStart(2,'0');};
   return dt.getUTCFullYear()+'-'+p(dt.getUTCMonth()+1)+'-'+p(dt.getUTCDate()); }
-/* officialDate es la fecha LOCAL del juego segun la MLB. Usarla evita que un
-   juego nocturno en la costa oeste cuente "ayer" como el dia del juego mismo. */
 function diaBase(oficial){
   var pt=String(oficial).split('-');
   return new Date(Date.UTC(+pt[0], +pt[1]-1, +pt[2], 12, 0, 0));
 }
-/* Historial de 60 dias: sirve para los ultimos 5 juegos, la racha, y para
-   saber cuantas carreras le anoto el equipo al abridor en cada salida suya. */
 function historial(teamId,baseDate){
   var k=teamId+'-'+ymd(baseDate);
   if(cache.hist[k]) return Promise.resolve(cache.hist[k]);
@@ -887,8 +887,6 @@ function historial(teamId,baseDate){
      cache.hist[k]=out; return out;
    }).catch(function(){ var out={juegos:[]}; cache.hist[k]=out; return out; });
 }
-/* Cuatro dias de boxscores: quien lanzo dos dias seguidos (disponibilidad)
-   y el ERA que ha tirado el bullpen en esos dias (forma reciente). */
 function quemados(teamId,baseDate){
   var k=teamId+'-'+ymd(baseDate);
   if(cache.quem[k]) return Promise.resolve(cache.quem[k]);
@@ -935,7 +933,6 @@ function quemados(teamId,baseDate){
     cache.quem[k]=out; return out;
   }).catch(function(){ return {ayer:[],seguidos:[],era4:null,ip4:0,dias:4}; });
 }
-/* Lista de lesionados del roster de temporada completa. */
 function lesionados(teamId){
   if(cache.il[teamId]) return Promise.resolve(cache.il[teamId]);
   return j(API+'/teams/'+teamId+'/roster?rosterType=fullSeason').then(function(d){
@@ -966,7 +963,6 @@ function lineup(gamePk){
   }).catch(function(){ return null; });
 }
 function regulares(teamId,baseDate){
-  /* Titulares habituales: frecuencia en los ultimos 5 juegos finalizados */
   var k=teamId+'-'+ymd(baseDate);
   if(cache.reg[k]) return Promise.resolve(cache.reg[k]);
   var ini=ymd(new Date(baseDate.getTime()-8*86400000));
@@ -1036,26 +1032,16 @@ function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];}); }
 function num(v,d){ d=(d==null?2:d); return (v==null||!isFinite(v))?'—':v.toFixed(d); }
 function pc(v){ return (v*100).toFixed(1)+'%'; }
-/* Los innings se guardan en tercios decimales (4.667). Se muestran como 4.2,
-   que es el formato de ESPN, MLB.com y Baseball Reference: 4 innings y 2 outs. */
 function ipMlb(n){
   if(n==null||!isFinite(n)) return '—';
   var outs=Math.round(n*3), ent=Math.floor(outs/3), r=outs%3;
   return ent+'.'+r;
 }
-function ipTxt(n){
-  if(n==null||!isFinite(n)) return '—';
-  var outs=Math.round(n*3), ent=Math.floor(outs/3), r=outs%3;
-  return ent+(r===1?'⅓':r===2?'⅔':'');
-}
-/* Game Score de Bill James. Un solo numero por salida: 50 es apertura promedio.
-   Cuenta hits y boletos, no solo carreras limpias, asi que no depende tanto de
-   la defensa ni de la suerte con corredores en base. */
 function gameScore(s){
   if(s.h==null||s.bb==null) return null;
   var outs=Math.round(s.ip*3);
   var inn=Math.floor(outs/3);
-  var un=Math.max(0,(s.r||0)-(s.er||0));   /* carreras sucias, valen la mitad */
+  var un=Math.max(0,(s.r||0)-(s.er||0));
   return Math.round(50+outs+Math.max(0,inn-4)*2+s.k-2*s.h-4*s.er-2*un-s.bb);
 }
 function gscTxt(g){
@@ -1066,19 +1052,12 @@ function gscTxt(g){
   if(g>=40) return 'floja';
   return 'mala';
 }
-
-/* Regresion a la media. El ancla por defecto es el promedio de la liga, pero si el
-   pitcher tiene FIP propio se usa ESE: es una estimacion de su talento real y no
-   aplasta a los ases contra la media. Prior de 40 IP en vez de 60 por lo mismo —
-   con 60 un abridor de media temporada quedaba jalado casi hasta el promedio. */
 function reg(era,ip,prior,ancla){
   if(era==null||!isFinite(era)) return null;
   var L=(ancla!=null&&isFinite(ancla))?ancla:(LIGA_ERA!=null?LIGA_ERA:4.10);
   return (era*ip + L*prior)/(ip+prior);
 }
 function eraUsado(se,l5){
-  /* El ancla es el FIP del pitcher, pero un FIP de 15 innings es tan ruidoso como
-     el ERA: primero se regresa el propio FIP hacia la liga, y ESE es el ancla. */
   var anc=null;
   if(se.fip!=null&&isFinite(se.fip)&&se.ip>0){
     var L=(LIGA_ERA!=null?LIGA_ERA:4.10);
@@ -1098,7 +1077,6 @@ function eraCrudo(se,l5){
   if(se.era!=null&&l5.era!=null) return se.era*0.70+l5.era*0.30;
   return se.era!=null?se.era:l5.era;
 }
-/* Ofensiva usada: mezcla 70 temporada / 30 ultimos 14 dias, o solo temporada. */
 function rgUsado(o,o14){
   if(OFF==='season'||!o14||o14.rg==null) return o.rg;
   if(o.rg==null) return o14.rg;
@@ -1144,7 +1122,7 @@ function quemBloque(q,nom){
   return '<div class="flag">Bullpen de <b>'+nom+'</b>: descansado, nadie lanzó ayer.'+extra+'</div>';
 }
 
-/* ---------- forma y record (contexto, no entra al calculo) ---------- */
+/* ---------- forma y record ---------- */
 function racha(js){
   if(!js.length) return null;
   var last=js[js.length-1].win, n=0;
@@ -1222,8 +1200,6 @@ function salidasBloque(nombre,l5,hist,se){
   var ipx  = n ? ip/n : null;
   var kx   = n ? ks/n : null;
   var gx   = ngs ? gs/ngs : null;
-  /* Si las 5 salidas cubren mucho mas de lo normal (5-6 dias entre aperturas),
-     hubo lesion o bajada a menores: no es forma reciente aunque lo parezca. */
   var span=null;
   var fs=l5.starts.map(function(s){ return s.f; }).filter(Boolean).sort();
   if(fs.length>1){
@@ -1255,8 +1231,7 @@ function salidasBloque(nombre,l5,hist,se){
       '</div>':'')+
     (span!=null&&span>45?'<div class="flag">⚠️ Estas 5 salidas cubren <b>'+span+' días</b>. '+
       'Un abridor sano tira cada 5 o 6 días, así que ahí hubo lesión o tiempo en las menores. '+
-      'Esto no es forma reciente: la salida más vieja de la tabla ya no dice nada de cómo está hoy, '+
-      'y el ERA de últimas 5 que usa el modelo viene contaminado con ella. '+
+      'Esto no es forma reciente y el ERA de últimas 5 viene contaminado. '+
       'Si vas a apostar este juego, busca por qué estuvo parado.</div>':'')+
     (!hayG?'<div class="leyenda">Sin hits ni boletos en el log de este pitcher, así que no se pudo calcular el Game Score. Mira el detalle.</div>':'');
   if(eraS!=null&&apx!=null){
@@ -1271,7 +1246,7 @@ function salidasBloque(nombre,l5,hist,se){
   return o;
 }
 
-/* ---------- registro de picks (queda en el telefono) ---------- */
+/* ---------- registro de picks ---------- */
 var REG_KEY='ventaja_picks_v1';
 function regLeer(){
   try{ var t=localStorage.getItem(REG_KEY); return t?JSON.parse(t):[]; }
@@ -1288,7 +1263,7 @@ function regExiste(o){
   return false;
 }
 function regAdd(o){
-  if(regExiste(o)) return null;      /* mismo juego, mismo mercado, misma cuota */
+  if(regExiste(o)) return null;
   var a=regLeer();
   o.id='p'+Date.now()+Math.floor(Math.random()*1000);
   a.push(o);
@@ -1302,8 +1277,6 @@ function regUpd(id,campos){
 function regDel(id){
   regEscribir(regLeer().filter(function(p){ return p.id!==id; }));
 }
-/* CLV: si la cuota cerro mas corta que la que tomaste, le ganaste al mercado.
-   Los dos numeros llevan la comision adentro, asi que casi toda se cancela al restar. */
 function clvPts(p){
   if(p.cierre==null||p.cierre==='') return null;
   var a=impMod(p.am,p.plat), b=impMod(p.cierre,p.plat);
@@ -1313,7 +1286,7 @@ function clvPts(p){
 function unidades(p){
   var pg=pagoMod(p.am,p.plat);
   var fee=pg?pg.fee:0;
-  if(p.res==='E') return -fee;                 /* empate: vuelve el dinero, la comision no */
+  if(p.res==='E') return -fee;
   if(p.res==='G') return pg?pg.b-fee:null;
   if(p.res==='P') return -(1+fee);
   return null;
@@ -1371,7 +1344,7 @@ function pintarRegistro(){
       o+='<tr><td>'+esc(c.t)+'</td><td class="n">'+c.dicho.toFixed(1)+'%</td><td class="n">'+
          c.real.toFixed(0)+'%</td><td class="n">'+c.n+'</td></tr>';
     });
-    o+='</table><div class="flag">Si lo que dices queda muy por encima de lo que pasa, tu modelo viene inflado y hay que bajarle el multiplicador.</div>';
+    o+='</table><div class="flag">Si lo que dices queda muy por encima de lo que pasa, tu modelo viene inflado.</div>';
   }
   res.innerHTML=o;
 
@@ -1424,8 +1397,7 @@ function pintarRegistro(){
   });
 }
 
-/* Junta TODOS los mercados del juego en los que ya metiste cuota:
-   moneyline, handicap, total y ponches de cada abridor. */
+/* ---------- ranking por EV dentro del juego ---------- */
 function recolectar(root){
   var out=[];
   var meter=function(m,p,push,am){
@@ -1434,7 +1406,7 @@ function recolectar(root){
     out.push({m:m, p:p, push:push||0, am:am});
   };
   root.querySelectorAll('.cmp').forEach(function(b){
-    if(b.dataset.cap==='1') return;   /* porcentaje recortado: no es comparable */
+    if(b.dataset.cap==='1') return;
     meter((b.dataset.na||'Visita')+' gana', +b.dataset.pa, 0, b.querySelector('.ca').value);
     meter((b.dataset.nh||'Local')+' gana',  +b.dataset.ph, 0, b.querySelector('.ch').value);
   });
@@ -1465,8 +1437,6 @@ function nivel(edge,ev){
   if(edge<5)  return {n:2, t:'valor moderado', c:''};
   return           {n:3, t:'valor fuerte',    c:'big'};
 }
-/* Ranking de todas las proposiciones del juego, de mejor a peor por EV.
-   Es el orden matemático puro: cual paga mas de lo que deberia. */
 function actualizarRanking(root){
   var caja=root.querySelector('.rank');
   if(!caja) return;
@@ -1511,8 +1481,6 @@ function actualizarRanking(root){
   var juego=caja.dataset.juego||'—', fecha=caja.dataset.fecha||hoyISO();
   caja.querySelectorAll('button.gp').forEach(function(b){
     var base={f:fecha, juego:juego, m:b.dataset.m, p:+b.dataset.p, am:b.dataset.am, plat:PLATA};
-    /* Si ya esta en el registro, el boton nace marcado: repintar la tarjeta
-       (cambiar banca, multiplicador o modo) no puede duplicar un pick. */
     if(regExiste(base)){ b.textContent='Ya guardado ✓'; b.disabled=true; return; }
     b.addEventListener('click',function(){
       var id=regAdd({f:base.f, juego:base.juego, m:base.m, p:base.p,
@@ -1524,25 +1492,21 @@ function actualizarRanking(root){
   });
 }
 
-/* Veredicto real: no lo decide la probabilidad sola sino el edge contra la cuota.
-   64% a -200 es mala apuesta; 55% a +120 es buena. */
+/* ---------- veredicto por EV ---------- */
 function veredictoEV(pA,pH,amA,amH,nomA,nomH,vc){
   var dv=devig(amA,amH);
   if(!dv) return null;
   var bk=banca();
   var lados=[{n:nomA,p:pA/100,raw:amA,imp:dv.impA,fair:dv.fairA},
              {n:nomH,p:pH/100,raw:amH,imp:dv.impH,fair:dv.fairH}];
-  /* El pago sale de pagoMod, no de decimal(): en Kalshi el numero son centavos,
-     no cuota americana, y ademas hay comision. Antes esto calculaba el EV del
-     moneyline como si 58c fuera +58, y el veredicto salia mal en Kalshi. */
   var okPago=true;
   lados.forEach(function(L){
     var pg=pagoMod(L.raw);
     if(!pg){ okPago=false; return; }
     L.b=pg.b; L.fee=pg.fee;
     L.ev=L.p*pg.b-(1-L.p)-pg.fee;
-    L.edge=L.p*100-L.imp;          /* contra lo que te pagan */
-    L.dif =L.p*100-L.fair;         /* contra la opinion real del mercado */
+    L.edge=L.p*100-L.imp;
+    L.dif =L.p*100-L.fair;
     var bn=pg.b-pg.fee;
     L.kelly=bn>0?(L.p*bn-(1-L.p)*(1+pg.fee))/bn:0;
     L.stake=(bk&&L.kelly>0)?bk*L.kelly*0.25:null;
@@ -1580,14 +1544,13 @@ function veredictoEV(pA,pH,amA,amH,nomA,nomH,vc){
       ' y lo que sobre es el diferencial entre compra y venta. Lo que sí cobra es comisión por '+
       'operación, y esa ya va descontada del EV y del stake.</div>'
     : '<div class="flag">La casa cobra '+dv.vig.toFixed(1)+
-      ' puntos de comisión en este mercado. La fila "sin vig" es lo que el mercado de verdad cree; '+
-      'la de arriba viene inflada y no sirve para medirte.</div>';
+      ' puntos de comisión en este mercado. La fila "sin vig" es lo que el mercado de verdad cree.</div>';
   var sep=Math.abs(best.dif);
   if(sep>=8) o+='<div class="flag">⚠️ Te separas '+sep.toFixed(1)+' puntos del mercado en ese lado. '+
      'Una diferencia así casi siempre significa que al modelo le falta un dato que el mercado ya tiene — '+
      'lineup, una lesión de última hora, un cambio de abridor. Revisa antes de apostar.</div>';
-  if(vc!=null&&vc<0.50&&best.ev>0) o+='<div class="flag">Ojo: la ventaja en carreras es de solo '+
-     vc.toFixed(2)+', por debajo de tu corte de 0.50. Hay valor contra la cuota pero el modelo está '+
+  if(vc!=null&&vc<CORTE_GRIS&&best.ev>0) o+='<div class="flag">Ojo: la ventaja en carreras es de solo '+
+     vc.toFixed(2)+', por debajo de tu corte de '+CORTE_GRIS.toFixed(2)+'. Hay valor contra la cuota pero el modelo está '+
      'partiendo de un margen muy fino.</div>';
   return o;
 }
@@ -1616,7 +1579,7 @@ function ajuste(nombre,crudo,usado){
   if(crudo==null||usado==null) return '';
   var d=crudo-usado;
   if(Math.abs(d)<0.75) return '';
-  return '<div class="flag"><b>'+esc(nombre)+'</b>: su ERA crudo es '+num(crudo)+', pero tiene pocos innings para que ese número signifique algo. Se jaló hacia el promedio de la liga y quedó en '+num(usado)+'. Sin ese ajuste el cálculo se dispara.</div>';
+  return '<div class="flag"><b>'+esc(nombre)+'</b>: su ERA crudo es '+num(crudo)+', pero tiene pocos innings para que ese número signifique algo. Se jaló hacia el promedio de la liga y quedó en '+num(usado)+'.</div>';
 }
 function hoyISO(){
   var t=new Date(), p=function(n){return String(n).padStart(2,'0');};
@@ -1630,16 +1593,20 @@ function cargar(){
   if(!iso){ $('status').textContent='Falta la fecha.'; return; }
   var pt=iso.split('-'), y=pt[0], m=pt[1], d=pt[2];
   $('slate').innerHTML='';
+  $('algane').innerHTML='';
+  $('combibox').innerHTML='';
+  $('gane_zona').style.display='none';
+  COMBI={};
   $('status').className='status';
   $('status').textContent='Buscando juegos…';
-  if(LIGA_YEAR!==+y){   /* cambio de temporada: los promedios viejos no sirven */
+  if(LIGA_YEAR!==+y){
     K_LIGA=null; LIGA_ERA=null; LIGA_RG=null; STAND=null; LIGA_YEAR=+y;
   }
   kLiga(+y); ligaEra(+y); standings(+y);
   j(API+'/schedule?sportId=1&date='+m+'/'+d+'/'+y+'&hydrate=probablePitcher,team,venue(location,fieldInfo)').then(function(data){
     var games=(data.dates&&data.dates[0]&&data.dates[0].games)||[];
     if(!games.length){ $('status').textContent='No hay juegos de MLB ese día.'; return; }
-    $('status').textContent=games.length+' juegos. Toca uno para correr los números.';
+    $('status').textContent=games.length+' juegos. Toca uno para correr los números, o dale a 🏆 Ranking al gane para calcularlos todos.';
     games.forEach(function(g){ $('slate').appendChild(fila(g,+y)); });
   }).catch(function(e){
     $('status').className='status err';
@@ -1653,6 +1620,7 @@ function fila(g,year){
   var hora=new Date(g.gameDate).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
   var el=document.createElement('div');
   el.className='game';
+  el._pk=g.gamePk;
   el.innerHTML='<div class="head"><div class="match">'+esc(a.team.name)+' <span class="vs">@</span> '+esc(h.team.name)+
     '<small>&#9918; '+esc(pa?pa.fullName:'Abridor por confirmar')+' <span class="vs">vs</span> '+
     esc(pih?pih.fullName:'Abridor por confirmar')+'</small>'+
@@ -1660,12 +1628,14 @@ function fila(g,year){
     '<div class="chev">&#9660;</div></div></div>'+
     '<div class="body"><div class="status">Cargando números…</div></div>';
   var head=el.querySelector('.head'), body=el.querySelector('.body');
-  var cargado=false;
-  head.addEventListener('click',function(){
-    el.classList.toggle('open');
-    if(cargado||!el.classList.contains('open')) return;
-    cargado=true;
-    if(!pa||!pih){ body.innerHTML='<div class="status err">Todavía no hay abridores confirmados. Vuelve más tarde o métele los números a mano abajo.</div>'; return; }
+
+  el._cargar=function(){
+    if(el._prom) return el._prom;
+    if(!pa||!pih){
+      body.innerHTML='<div class="status err">Todavía no hay abridores confirmados. Vuelve más tarde o métele los números a mano abajo.</div>';
+      el._prom=Promise.resolve(null);
+      return el._prom;
+    }
     var v=g.venue||{};
     var loc=v.location&&v.location.defaultCoordinates;
     var pkinfo=PARK[v.id]||null;
@@ -1673,7 +1643,7 @@ function fila(g,year){
     var cerrado=(techo==='techo')||/dome|indoor/i.test(techo);
     var pw=(loc&&!cerrado)?clima(loc.latitude,loc.longitude,new Date(g.gameDate).getTime()):Promise.resolve(null);
     var fecha=diaBase(g.officialDate||g.gameDate.slice(0,10));
-    Promise.all([ultimas5(pa.id,year),ultimas5(pih.id,year),temporada(pa.id,year),temporada(pih.id,year),
+    el._prom=Promise.all([ultimas5(pa.id,year),ultimas5(pih.id,year),temporada(pa.id,year),temporada(pih.id,year),
       ofensiva(a.team.id,year),ofensiva(h.team.id,year),bullpen(a.team.id,year),bullpen(h.team.id,year),
       kLiga(year),ligaEra(year),pw,mano(pa.id),mano(pih.id),
       quemados(a.team.id,fecha),quemados(h.team.id,fecha),
@@ -1691,21 +1661,29 @@ function fila(g,year){
                  stand:r[15], hia:r[16], hih:r[17], o14a:r[18], o14h:r[19],
                  gamePk:g.gamePk, fecha:fecha, year:year};
           pintar(el);
+          return el._d;
         });
     }).catch(function(e){
       body.innerHTML='<div class="status err">Falló la carga ('+esc(e.message)+'). Usa el cálculo a mano.</div>';
+      return null;
     });
+    return el._prom;
+  };
+
+  head.addEventListener('click',function(){
+    el.classList.toggle('open');
+    if(el.classList.contains('open')) el._cargar();
   });
   return el;
 }
 
 function pintar(el){
   var body=el.querySelector('.body');
-  /* Guardar las cuotas ya tecleadas: cambiar la banca o el multiplicador
-     repinta la tarjeta y antes las borraba. */
   var prev=[];
   if(!LIMPIAR) body.querySelectorAll('input').forEach(function(i){ prev.push(i.value); });
+  ULTIMO=null;
   body.innerHTML=detalle(el._d);
+  el._calc=ULTIMO;
   var ahora=body.querySelectorAll('input');
   if(prev.length===ahora.length)
     ahora.forEach(function(i,k){ i.value=prev[k]; });
@@ -1713,13 +1691,12 @@ function pintar(el){
   body.querySelectorAll('input').forEach(function(i){
     if(i.value!=='') i.dispatchEvent(new Event('input'));
   });
-  rellenarKalshi(el);   /* si ya se bajaron precios de Kalshi, se ponen solos */
+  rellenarKalshi(el);
 }
 
 function detalle(x){
   /* OJO: la variable del abridor local se llama pih y NO ph. La funcion global
-     ph(book,kalshi) se usa aqui abajo para los placeholders de cuota; si esta
-     variable se llamara ph la taparia y todo el bloque reventaria. */
+     ph(book,kalshi) se usa aqui abajo para los placeholders de cuota. */
   var a=x.a,h=x.h,pa=x.pa,pih=x.ph,l5a=x.l5a,l5h=x.l5h,sea=x.sea,seh=x.seh,oa=x.oa,oh=x.oh,ba=x.ba,bh=x.bh;
   var eA=eraUsado(sea,l5a), eH=eraUsado(seh,l5h);
   var cA=eraCrudo(sea,l5a), cH=eraCrudo(seh,l5h);
@@ -1727,8 +1704,6 @@ function detalle(x){
   if(eA==null||eH==null||rgSeasonA==null||rgSeasonH==null||ba.era==null||bh.era==null)
     return '<div class="status err">Faltan datos de temporada para este juego. Métele los números a mano abajo.</div>';
 
-  /* splits L/R: escala las carreras por juego segun como batea el equipo
-     contra la mano del abridor rival. Tope de +-10% para no sobreajustar. */
   function fSplit(ops,total){
     if(ops==null||total==null||total<=0) return 1;
     var f=ops/total;
@@ -1739,7 +1714,6 @@ function detalle(x){
 
   var r=ventaja({eraA:eA,eraH:eH,rgA:rgA,rgH:rgH,bpA:ba.era,bpH:bh.era});
 
-  /* bullpen quemado: mismos escalones que ajustar_ml() de Betbot */
   function penal(q){
     if(!q) return 0;
     if(q.seguidos.length>=2) return 2.0;
@@ -1750,8 +1724,6 @@ function detalle(x){
   var penA=penal(x.qa), penH=penal(x.qh);
   var pAjuste=penA-penH;
   var bruto2=r.pct+pAjuste;
-  /* El ajuste de bullpen puede empujar el numero fuera del tope: hay que volver a
-     marcar capped, si no el veredicto por EV corre sobre un porcentaje recortado. */
   if(bruto2>78||bruto2<22) r.capped=true;
   var pctFinal=Math.max(22,Math.min(78,bruto2));
   r.pctBase=r.pct; r.penA=penA; r.penH=penH; r.pct=pctFinal;
@@ -1762,10 +1734,10 @@ function detalle(x){
   var abrGana=homeLead?nomH:nomA, abrPierde=homeLead?nomA:nomH;
   var pctGana=Math.max(pA,pH), vc=Math.abs(pctGana-50)/MULT;
 
-  /* Carreras esperadas por el metodo multiplicativo (tipo log5):
-     ofensiva del equipo x carreras que permite el rival / promedio de la liga.
-     Respeta los extremos: contra un as baja de verdad, contra un pitcher malo sube.
-     La diferencia se fuerza despues al delta de la formula para que todo cuadre. */
+  /* se deja disponible para el modo Al gane */
+  ULTIMO={pA:pA, pH:pH, pctGana:pctGana, gana:gana, nomA:nomA, nomH:nomH,
+          vc:vc, capped:r.capped, abrGana:abrGana};
+
   var LRG=(LIGA_RG!=null?LIGA_RG:4.30);
   var permH=(eH*6/9 + bh.era*3/9)*1.08;
   var permA=(eA*6/9 + ba.era*3/9)*1.08;
@@ -1784,34 +1756,35 @@ function detalle(x){
   var bruto=pfv*fTemp;
   var fSuave=1+(bruto-1)*SUAVE;
   var Tbase=T;
-  var T9=T*fSuave;      /* nueve innings: es lo que decide el margen */
-  T=T9+EXTRAS;          /* total del juego completo, con extras */
+  var T9=T*fSuave;
+  T=T9+EXTRAS;
   var dEf=(r.pct-50)/MULT;
   var lamH=(T9+dEf)/2, lamA=(T9-dEf)/2;
   if(lamA<0.5){lamA=0.5;} if(lamH<0.5){lamH=0.5;}
 
-  /* handicap: probabilidad de ganar por 2 o mas */
   var favPor2 = homeLead ? matriz(lamA,lamH,function(xx,yy){return yy-xx>=2;})
                          : matriz(lamA,lamH,function(xx,yy){return xx-yy>=2;});
   var dogMas15 = 1-favPor2;
-  /* Cruce: el handicap sale del Poisson y el ganador sale de la formula. Si los dos
-     no cuentan la misma historia, uno de los dos numeros esta mal. El empate del
-     Poisson se reparte mitad y mitad porque en beisbol se resuelve en extras. */
   var pEmp=matriz(lamA,lamH,function(xx,yy){return xx===yy;});
   var pPoisH=(matriz(lamA,lamH,function(xx,yy){return yy>xx;})+pEmp/2)*100;
   var brecha=Math.abs(pPoisH-pH);
 
+  /* Cortes en CARRERAS: no cambian al cambiar el multiplicador. */
   var pick;
-  if(vc<0.50) pick='<div class="pick no"><div class="q">Sin pick al ganador</div><div class="r">Ventaja de solo '+vc.toFixed(2)+' carreras, por debajo de tu corte de 0.50. Muy parejos.</div></div>';
-  else if(pctGana>=64) pick='<div class="pick big"><div class="q"><span>🎯</span>Juégale a '+esc(gana)+'</div><div class="r">Gran oportunidad · '+pctGana.toFixed(1)+'% · cuota justa '+american(pctGana)+' · ventaja de '+vc.toFixed(2)+' carreras. Solo si el book paga más de '+american(pctGana)+'.</div></div>';
-  else if(pctGana>=59) pick='<div class="pick"><div class="q"><span>🎯</span>Juégale a '+esc(gana)+'</div><div class="r">Ventaja sólida · '+pctGana.toFixed(1)+'% · cuota justa '+american(pctGana)+' · ventaja de '+vc.toFixed(2)+' carreras. Solo si el book paga más de '+american(pctGana)+'.</div></div>';
-  else pick='<div class="pick no"><div class="q">Zona gris</div><div class="r">'+esc(gana)+' sale arriba con '+pctGana.toFixed(1)+'% pero no llega a 59%. Déjalo pasar salvo que el book regale la línea.</div></div>';
+  if(vc<CORTE_GRIS)
+    pick='<div class="pick no"><div class="q">Sin pick al ganador</div><div class="r">Ventaja de solo '+vc.toFixed(2)+' carreras, por debajo de tu corte de '+CORTE_GRIS.toFixed(2)+'. Muy parejos.</div></div>';
+  else if(vc>=CORTE_FUERTE)
+    pick='<div class="pick big"><div class="q"><span>🎯</span>Juégale a '+esc(gana)+'</div><div class="r">Gran oportunidad · '+pctGana.toFixed(1)+'% · cuota justa '+american(pctGana)+' · ventaja de '+vc.toFixed(2)+' carreras. Solo si el book paga más de '+american(pctGana)+'.</div></div>';
+  else if(vc>=CORTE_SOLIDO)
+    pick='<div class="pick"><div class="q"><span>🎯</span>Juégale a '+esc(gana)+'</div><div class="r">Ventaja sólida · '+pctGana.toFixed(1)+'% · cuota justa '+american(pctGana)+' · ventaja de '+vc.toFixed(2)+' carreras. Solo si el book paga más de '+american(pctGana)+'.</div></div>';
+  else
+    pick='<div class="pick no"><div class="q">Zona gris</div><div class="r">'+esc(gana)+' sale arriba con '+pctGana.toFixed(1)+'% y '+vc.toFixed(2)+' carreras de ventaja, que no llega a '+CORTE_SOLIDO.toFixed(2)+'. Déjalo pasar salvo que el book regale la línea.</div></div>';
 
   var avisos=[];
   if(l5a.n<5||l5h.n<5) avisos.push('Muestra corta en últimas salidas: '+l5a.n+' y '+l5h.n+'.');
   if(sea.ip<20||seh.ip<20) avisos.push('Poco volumen de temporada en uno de los abridores.');
   if(ba.aprox||bh.aprox) avisos.push('ERA de bullpen sin split; se usó el del equipo completo (*) y viene inflado por los abridores.');
-  if(r.capped) avisos.push('El porcentaje del modelo chocó con el tope de 22–78%: su número real quedaba fuera de ese rango, así que el moneyline no se compara contra la cuota en este juego.');
+  if(r.capped) avisos.push('El porcentaje del modelo chocó con el tope de 22–78%, así que el moneyline no se compara contra la cuota en este juego.');
   if(OFF==='mix'&&(!x.o14a||x.o14a.rg==null||!x.o14h||x.o14h.rg==null)) avisos.push('Falta ofensiva de 14 días en un equipo; ese lado va con el promedio de temporada.');
 
   var out=
@@ -1827,7 +1800,7 @@ function detalle(x){
   '<div class="pickbox">'+pick+'</div>'+
   '<div class="leyenda">&#128681; Este veredicto sale <b>solo del modelo</b>, sin mirar el mercado. '+
   'Baja a &#128176; <b>Compara con el book</b> y escribe las dos cuotas: ah&iacute; se recalcula por valor real '+
-  'contra la l&iacute;nea y aparece el &#127942; Ranking del juego. Las casillas vac&iacute;as muestran un ejemplo en gris.</div>'+
+  'contra la l&iacute;nea y aparece el &#127942; Ranking del juego.</div>'+
   '<div class="rank" data-juego="'+esc(a.team.abbreviation||a.team.name)+' @ '+
     esc(h.team.abbreviation||h.team.name)+'" data-fecha="'+esc(ymd(x.fecha))+'"></div>'+
   '<h3><span class="ic">📊</span>Los números</h3>'+
@@ -1854,7 +1827,7 @@ function detalle(x){
   formaTabla(x,nomA,nomH)+
   salidasBloque(pa.fullName,l5a,x.hia,sea)+
   salidasBloque(pih.fullName,l5h,x.hih,seh)+
-  '<div class="flag">Nada de este bloque entra al cálculo, y es a propósito. El récord de un pitcher mide lo que anotó su ofensiva y lo que aguantó su bullpen, no cómo tiró él: la columna <b>Apoyo</b> son las carreras que le anotó su equipo en cada salida. Léelo como contexto, no como señal.</div>'+
+  '<div class="flag">Nada de este bloque entra al cálculo, y es a propósito. El récord de un pitcher mide lo que anotó su ofensiva y lo que aguantó su bullpen, no cómo tiró él: la columna <b>Apoyo</b> son las carreras que le anotó su equipo en cada salida.</div>'+
 
   '<h3><span class="ic">🤚</span>Manos y bullpen</h3>'+
   manosBloque(x,fA,fH,nomA,nomH)+
@@ -1886,14 +1859,14 @@ function detalle(x){
     '<label>'+abrPierde+' +1.5</label><input type="text" class="hd" placeholder="'+ph('-175','64')+'">'+
     '<div class="out"></div></div>'+
   '<div class="flag">Recuerda tu equivalencia de Kalshi: el +1.5 del underdog es el "No" al contrato de que el favorito gana por más de 1.5.</div>'+
-  '<div class="flag">Si el favorito es el local, este número viene algo optimista: el local no batea el noveno cuando va ganando, así que gana por 2+ menos seguido de lo que dice un modelo de nueve innings completos.</div>'+
+  '<div class="flag">Si el favorito es el local, este número viene algo optimista: el local no batea el noveno cuando va ganando.</div>'+
 
   '<h3><span class="ic">🏟️</span>Contexto del parque</h3>'+
   contexto(x,pfv,Tbase,T,notaTemp)+
 
   '<h3><span class="ic">🎯</span>Total</h3>'+
   '<div class="leyenda">&#9997;&#65039; Las casillas est&aacute;n <b>vac&iacute;as</b>: lo gris son ejemplos. '+
-  'Toca cada una y escribe la l&iacute;nea y las dos cuotas de tu book &mdash; sin eso no hay ranking ni veredicto por valor.</div>'+
+  'Toca cada una y escribe la l&iacute;nea y las dos cuotas de tu book.</div>'+
   '<div class="flag">Total esperado: <b>'+num(T,1)+' carreras</b> (crudo '+num(Tbase,1)+', ajustado por parque, temperatura e innings extra).</div>'+
   '<div class="row" data-tot="'+T.toFixed(3)+'">'+
     '<label>Línea</label><input type="number" inputmode="decimal" step="0.5" class="tl" placeholder="ej. 8.5">'+
@@ -1922,7 +1895,6 @@ function detalle(x){
 }
 
 function kBloque(nombre,se,rival,abrRival,l5){
-  /* IP por salida y K/9 SOLO de aperturas: mezclar relevos infla la proyeccion. */
   var ipx=(l5&&l5.ipxAb!=null)?l5.ipxAb:se.ipx;
   var k9 =(l5&&l5.k9Ab!=null) ?l5.k9Ab :se.k9;
   if(k9==null||ipx==null||se.gs<3)
@@ -2077,8 +2049,7 @@ function conectar(root){
       if(cap&&va&&vh){
         if(caja&&orig!=null) caja.innerHTML=orig;
         if(zona) zona.innerHTML='<div class="flag">⚠️ El porcentaje del modelo chocó con el tope '+
-          '(22–78%), o sea que su número real quedaba fuera de ese rango. Comparado contra la cuota '+
-          'eso inventa ventaja en el underdog. No se recalcula el veredicto en este juego.</div>';
+          '(22–78%). Comparado contra la cuota eso inventa ventaja. No se recalcula el veredicto en este juego.</div>';
         out.textContent=''; out.className='out';
         actualizarRanking(root);
         return;
@@ -2090,7 +2061,6 @@ function conectar(root){
         actualizarRanking(root);
         return;
       }
-      /* Falta una de las dos cuotas: no se puede quitar el vig, se muestra lo crudo. */
       if(caja&&orig!=null) caja.innerHTML=orig;
       if(zona) zona.innerHTML=(va||vh)?'<div class="flag">Mete las <b>dos</b> cuotas para quitarle la comisión al mercado y recalcular el veredicto.</div>':'';
       var msgs=[], hay=false;
@@ -2106,6 +2076,138 @@ function conectar(root){
   });
 }
 
+/* ---------- modo Al gane ---------- */
+var COMBI={};
+var COMBI_CUOTA='';
+
+function correrAlGane(){
+  var gs=[].slice.call(document.querySelectorAll('.game'));
+  if(!gs.length){ $('status').textContent='Primero carga una fecha.'; return; }
+  var btn=$('algane_btn');
+  btn.disabled=true;
+  $('gane_zona').style.display='';
+  $('algane').innerHTML='<div class="status">Calculando los '+gs.length+' juegos… esto tarda un minuto. No cierres la pantalla.</div>';
+  var hechos=0;
+  Promise.all(gs.map(function(el){
+    return (el._cargar?el._cargar():Promise.resolve(null)).then(function(v){
+      hechos++;
+      var e=$('algane');
+      if(e&&e.firstChild&&e.firstChild.className==='status')
+        e.firstChild.textContent='Calculando… '+hechos+' de '+gs.length;
+      return v;
+    });
+  })).then(function(){
+    pintarAlGane();
+  }).catch(function(){
+    pintarAlGane();
+  }).then(function(){ btn.disabled=false; });
+}
+
+function pintarAlGane(){
+  var caja=$('algane');
+  var lista=[];
+  document.querySelectorAll('.game').forEach(function(el){
+    if(!el._calc) return;
+    var c=el._calc;
+    lista.push({pk:el._pk, juego:c.nomA+' @ '+c.nomH, gana:c.gana, abr:c.abrGana,
+                p:c.pctGana, vc:c.vc, capped:c.capped});
+  });
+  if(!lista.length){
+    caja.innerHTML='<div class="flag">No se pudo calcular ningún juego. Puede que todavía no haya abridores confirmados.</div>';
+    return;
+  }
+  lista.sort(function(a,b){ return b.p-a.p; });
+  var o='';
+  lista.forEach(function(m,i){
+    var alto=(m.vc>=CORTE_SOLIDO), gris=(m.vc<CORTE_GRIS);
+    o+='<div class="fila'+(alto?' alto':'')+(gris?' gris':'')+'" data-pk="'+m.pk+'">'+
+       '<div class="pos">'+(i+1)+'</div>'+
+       '<div class="txt"><b>'+esc(m.gana)+'</b>'+
+       '<span>'+esc(m.juego)+' · ventaja '+m.vc.toFixed(2)+' carreras'+
+       (m.capped?' · tope alcanzado':'')+'</span></div>'+
+       '<div class="pct">'+m.p.toFixed(1)+'%<em>'+american(m.p)+'</em></div>'+
+       '<input type="checkbox" class="chk"'+(COMBI[m.pk]?' checked':'')+'>'+
+       '</div>';
+  });
+  var altos=lista.filter(function(m){ return m.vc>=CORTE_SOLIDO; }).length;
+  o+='<div class="leyenda">Ordenados por probabilidad, sin mirar cuota. En verde los que pasan '+
+     CORTE_SOLIDO.toFixed(2)+' carreras de ventaja ('+altos+' hoy); en gris los que ni llegan a '+
+     CORTE_GRIS.toFixed(2)+'. En el backtest, con el multiplicador en 6, el único tramo donde el modelo '+
+     'entregó lo que prometía fue el de 60% para arriba — los de abajo son casi moneda al aire por más '+
+     'que salgan primeros en la lista.</div>';
+  caja.innerHTML=o;
+  caja.querySelectorAll('.fila').forEach(function(f){
+    var pk=f.dataset.pk;
+    var chk=f.querySelector('.chk');
+    chk.addEventListener('change',function(){
+      if(chk.checked){
+        var m=null;
+        lista.forEach(function(z){ if(String(z.pk)===String(pk)) m=z; });
+        if(m) COMBI[pk]=m;
+      }else delete COMBI[pk];
+      pintarCombi();
+    });
+  });
+  pintarCombi();
+}
+
+function pintarCombi(){
+  var caja=$('combibox');
+  var sel=[];
+  for(var k in COMBI) sel.push(COMBI[k]);
+  if(sel.length<2){
+    caja.innerHTML='<div class="flag">Marca dos o tres juegos de arriba para armar una combinada.</div>';
+    return;
+  }
+  sel.sort(function(a,b){ return b.p-a.p; });
+  var prod=1;
+  sel.forEach(function(m){ prod*=m.p/100; });
+  var pPct=prod*100;
+  var o='<h3><span class="ic">🎰</span>La combinada</h3>';
+  o+='<table><tr><th>Pata</th><th>Prob.</th><th>Cuota justa</th></tr>';
+  sel.forEach(function(m){
+    o+='<tr><td>'+esc(m.gana)+'</td><td class="n">'+m.p.toFixed(1)+'%</td>'+
+       '<td class="n">'+american(m.p)+'</td></tr>';
+  });
+  o+='<tr class="usa"><td>Las '+sel.length+' juntas</td><td class="n">'+pPct.toFixed(1)+'%</td>'+
+     '<td class="n">'+american(pPct)+'</td></tr></table>';
+  o+='<div class="row"><label>'+(PLATA==='kalshi'?'Precio del contrato':'Lo que te paga la casa')+'</label>'+
+     '<input type="text" id="combi_cuota" value="'+esc(COMBI_CUOTA)+'" placeholder="'+ph('+245','29')+'">'+
+     '<div class="out" id="combi_out"></div></div>';
+  o+='<div class="flag"><b>La cuota justa de esta combinada es '+american(pPct)+'.</b> '+
+     'Si la casa te paga menos que eso, pierdes dinero a la larga aunque aciertes a la tasa que dice el modelo.</div>';
+  o+='<div class="leyenda">Lo que el backtest encontró sobre combinar, con tus propios datos: en 2025, '+
+     '863 pares de picks de 60%+ ganaron los dos el 40.7% de las veces, contra el 39.1% que da simplemente '+
+     'multiplicar las dos probabilidades. O sea que juntar dos juegos <b>no aporta nada extra</b> — no se '+
+     'ayudan entre sí. Lo único que cambia es que la comisión se paga en cada pata: con un vig de 4.5% por '+
+     'pata, una sencilla bien pagada te deja −4.5% por dólar y un par te deja −8.8%. La cuota se ve más '+
+     'grande porque la apuesta es más difícil, no porque te estén regalando algo.</div>';
+  caja.innerHTML=o;
+  var inp=$('combi_cuota'), out=$('combi_out');
+  if(inp) inp.addEventListener('input',function(){
+    COMBI_CUOTA=inp.value;
+    var imp=impMod(inp.value);
+    var pg=pagoMod(inp.value);
+    if(imp==null||!pg){ out.textContent=''; out.className='out'; return; }
+    var p=pPct/100;
+    var ev=p*pg.b-(1-p)-pg.fee;
+    var bk=banca();
+    var bn=pg.b-pg.fee;
+    var f=bn>0?(p*bn-(1-p)*(1+pg.fee))/bn:0;
+    var stake=(bk&&f>0)?bk*f*0.25:null;
+    if(ev>0){
+      out.className='out si';
+      out.textContent='Te pagan por encima de la justa · EV +'+(ev*100).toFixed(1)+'% por dólar'+
+        (stake?' · ¼ Kelly $'+stake.toFixed(2):'')+
+        '. Ojo: cada pata tiene su propio error del modelo, y aquí se multiplican.';
+    }else{
+      out.className='out no';
+      out.textContent='Te pagan por debajo de la justa · EV '+(ev*100).toFixed(1)+'% por dólar. '+
+        'Necesitarías '+american(pPct)+' o más.';
+    }
+  });
+}
+
 /* ---------- manual ---------- */
 $('calcular').addEventListener('click',function(){
   var g=function(id){ return parseFloat($(id).value); };
@@ -2116,9 +2218,11 @@ $('calcular').addEventListener('click',function(){
   var r=ventaja(d), pH=r.pct, pA=100-pH;
   var gana=pH>=50?'el local':'la visita';
   var pctGana=Math.max(pA,pH), vc=Math.abs(pctGana-50)/MULT;
-  var pick = vc<0.50
-    ? '<div class="pick no"><div class="q">Sin pick</div><div class="r">Ventaja de '+vc.toFixed(2)+' carreras, por debajo de 0.50.</div></div>'
-    : '<div class="pick'+(pctGana>=64?' big':'')+'"><div class="q"><span>🎯</span>Juégale a '+gana+'</div><div class="r">'+pctGana.toFixed(1)+'% · cuota justa '+american(pctGana)+' · ventaja de '+vc.toFixed(2)+' carreras.</div></div>';
+  var pick;
+  if(vc<CORTE_GRIS)
+    pick='<div class="pick no"><div class="q">Sin pick</div><div class="r">Ventaja de '+vc.toFixed(2)+' carreras, por debajo de '+CORTE_GRIS.toFixed(2)+'.</div></div>';
+  else
+    pick='<div class="pick'+(vc>=CORTE_FUERTE?' big':'')+'"><div class="q"><span>🎯</span>Juégale a '+gana+'</div><div class="r">'+pctGana.toFixed(1)+'% · cuota justa '+american(pctGana)+' · ventaja de '+vc.toFixed(2)+' carreras.</div></div>';
   $('manual_out').innerHTML=
     '<div class="bar">'+
       '<span class="'+(pH>=50?'trail':'lead')+'" style="flex-grow:'+pA.toFixed(1)+'">Visita '+pA.toFixed(1)+'%</span>'+
@@ -2135,34 +2239,24 @@ $('calcular').addEventListener('click',function(){
   conectar($('manual_out'));
 });
 
-$('mult').addEventListener('change',function(){
-  MULT=+this.value;
+function repintarTodo(){
   var gs=document.querySelectorAll('.game');
   for(var i=0;i<gs.length;i++){ if(gs[i]._d) pintar(gs[i]); }
-});
-$('modo').addEventListener('change',function(){
-  MODO=this.value;
-  var gs=document.querySelectorAll('.game');
-  for(var i=0;i<gs.length;i++){ if(gs[i]._d) pintar(gs[i]); }
-});
+  if($('gane_zona').style.display!=='none') pintarAlGane();
+}
+$('mult').addEventListener('change',function(){ MULT=+this.value; repintarTodo(); });
+$('modo').addEventListener('change',function(){ MODO=this.value; repintarTodo(); });
+$('off').addEventListener('change',function(){ OFF=this.value; repintarTodo(); });
 $('plata').addEventListener('change',function(){
   PLATA=this.value;
-  LIMPIAR=true;              /* una cuota americana no significa nada en centavos */
-  var gs=document.querySelectorAll('.game');
-  for(var i=0;i<gs.length;i++){ if(gs[i]._d) pintar(gs[i]); }
+  LIMPIAR=true;
+  COMBI_CUOTA='';
+  repintarTodo();
   LIMPIAR=false;
   $('manual_out').innerHTML='';
   pintarRegistro();
 });
-$('off').addEventListener('change',function(){
-  OFF=this.value;
-  var gs=document.querySelectorAll('.game');
-  for(var i=0;i<gs.length;i++){ if(gs[i]._d) pintar(gs[i]); }
-});
-$('banca').addEventListener('input',function(){
-  var gs=document.querySelectorAll('.game');
-  for(var i=0;i<gs.length;i++){ if(gs[i]._d) pintar(gs[i]); }
-});
+$('banca').addEventListener('input',function(){ repintarTodo(); });
 $('reg_backup').addEventListener('click',function(){
   var t=JSON.stringify(regLeer());
   var m=$('reg_msg');
@@ -2190,6 +2284,7 @@ $('reg_import').addEventListener('click',function(){
 pintarRegistro();
 $('cargar').addEventListener('click',cargar);
 $('kalshi').addEventListener('click',traerKalshi);
+$('algane_btn').addEventListener('click',correrAlGane);
 $('limpiar').addEventListener('click',function(){
   cache.hit={};cache.pen={};cache.log={};cache.sea={};cache.mano={};cache.split={};
   cache.quem={};cache.reg={};cache.hist={};cache.off14={};cache.il={};
