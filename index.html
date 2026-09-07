@@ -225,7 +225,7 @@ footer summary{font-family:var(--cond);font-size:16px;color:var(--muted);padding
 <body>
 
 <div class="topbar"><div class="inner">
-  <h1 class="brand"><span class="ball">&#9918;</span>Ventaja <span class="ver">v8.1</span></h1>
+  <h1 class="brand"><span class="ball">&#9918;</span>Ventaja <span class="ver">v8.2</span></h1>
   <div class="sp"></div>
   <input type="date" id="fecha" style="max-width:170px">
   <button id="cargar">Cargar</button>
@@ -448,6 +448,11 @@ var EXTRAS=0.18;
 /* Cortes del veredicto, en CARRERAS de ventaja. Se usan carreras y no porcentaje
    porque las carreras no cambian al cambiar el multiplicador. */
 var CORTE_GRIS=0.50, CORTE_SOLIDO=1.20, CORTE_FUERTE=1.70;
+/* Castigo por bullpen quemado, en CARRERAS. Antes iba en puntos porcentuales y eso
+   lo ataba al multiplicador: los mismos 2 puntos valian 0.15 carreras con x13 y
+   0.33 con x6, o sea que al bajar el multiplicador le subimos el peso al bullpen
+   quemado a mas del doble sin decidirlo. En carreras no se mueve. */
+var PEN_FUERTE=0.15, PEN_LEVE=0.08;
 var ULTIMO=null;   /* numeros del ultimo detalle() pintado, para el modo Al gane */
 
 var PARK={
@@ -1716,17 +1721,18 @@ function detalle(x){
 
   function penal(q){
     if(!q) return 0;
-    if(q.seguidos.length>=2) return 2.0;
-    if(q.seguidos.length>=1) return 1.0;
-    if(q.ayer.length>=3)     return 1.0;
+    if(q.seguidos.length>=2) return PEN_FUERTE;
+    if(q.seguidos.length>=1) return PEN_LEVE;
+    if(q.ayer.length>=3)     return PEN_LEVE;
     return 0;
   }
   var penA=penal(x.qa), penH=penal(x.qh);
-  var pAjuste=penA-penH;
-  var bruto2=r.pct+pAjuste;
+  /* Se suma al delta en carreras y despues se convierte, no al reves. */
+  var deltaFinal=r.delta+(penA-penH);
+  var bruto2=50+deltaFinal*MULT;
   if(bruto2>78||bruto2<22) r.capped=true;
   var pctFinal=Math.max(22,Math.min(78,bruto2));
-  r.pctBase=r.pct; r.penA=penA; r.penH=penH; r.pct=pctFinal;
+  r.pctBase=r.pct; r.penA=penA; r.penH=penH; r.pct=pctFinal; r.deltaFinal=deltaFinal;
 
   var pH=r.pct, pA=100-pH, homeLead=pH>=50;
   var nomA=esc(a.team.abbreviation||a.team.name), nomH=esc(h.team.abbreviation||h.team.name);
@@ -1758,7 +1764,26 @@ function detalle(x){
   var Tbase=T;
   var T9=T*fSuave;
   T=T9+EXTRAS;
-  var dEf=(r.pct-50)/MULT;
+  var dEfBruto=deltaFinal;
+  /* El handicap sale de Poisson y el ganador sale de tu formula. Si cada uno usa
+     su propia escala, dicen cosas distintas del mismo juego: para una ventaja de
+     1 carrera el Poisson da ~63% y tu formula con x6 da 56%. El backtest dijo que
+     la escala buena es la tuya, asi que aqui se busca por biseccion la diferencia
+     de carreras que hace que el Poisson devuelva EXACTAMENTE tu porcentaje.
+     El total no se toca: solo cambia como se reparte entre los dos equipos. */
+  function poisPctLocal(d){
+    var lh=(T9+d)/2, la=(T9-d)/2;
+    if(la<0.3) la=0.3;
+    if(lh<0.3) lh=0.3;
+    var e=matriz(la,lh,function(xx,yy){return xx===yy;});
+    return (matriz(la,lh,function(xx,yy){return yy>xx;})+e/2)*100;
+  }
+  var lo=-T9*0.9, hi=T9*0.9, dEf=0;
+  for(var itd=0;itd<22;itd++){
+    dEf=(lo+hi)/2;
+    if(poisPctLocal(dEf)<r.pct) lo=dEf; else hi=dEf;
+  }
+  dEf=(lo+hi)/2;
   var lamH=(T9+dEf)/2, lamA=(T9-dEf)/2;
   if(lamA<0.5){lamA=0.5;} if(lamH<0.5){lamH=0.5;}
 
@@ -1772,7 +1797,13 @@ function detalle(x){
   var dogMas15 = 1-favPor2;
   var pEmp=matriz(lamA,lamH,function(xx,yy){return xx===yy;});
   var pPoisH=(matriz(lamA,lamH,function(xx,yy){return yy>xx;})+pEmp/2)*100;
-  var brecha=Math.abs(pPoisH-pH);
+  /* Comprobacion cruzada de verdad: la diferencia de carreras segun el metodo
+     multiplicativo (ofensiva x staff rival / liga) contra la de tu formula de
+     pesos. Son dos estimaciones independientes de lo mismo; si se separan mucho,
+     una de las dos esta mal. Antes se comparaba el Poisson contra la formula,
+     pero ahora el Poisson va anclado a la formula y esa comparacion no dice nada. */
+  var deltaMult=crudoH-crudoA;
+  var brecha=Math.abs(deltaMult-deltaFinal);
 
   /* Cortes en CARRERAS: no cambian al cambiar el multiplicador. */
   var pick;
@@ -1838,9 +1869,10 @@ function detalle(x){
   manosBloque(x,fA,fH,nomA,nomH)+
   quemBloque(x.qa,nomA)+quemBloque(x.qh,nomH)+
   ((penA||penH)?'<div class="flag">Ajuste por bullpen quemado: '+
-     (penH?nomH+' −'+penH.toFixed(1)+' puntos':'')+((penH&&penA)?' · ':'')+
-     (penA?nomA+' −'+penA.toFixed(1)+' puntos':'')+
-     '. La fórmula daba '+r.pctBase.toFixed(1)+'% al local, queda en '+r.pct.toFixed(1)+'%.</div>':'')+
+     (penH?nomH+' −'+penH.toFixed(2)+' carreras':'')+((penH&&penA)?' · ':'')+
+     (penA?nomA+' −'+penA.toFixed(2)+' carreras':'')+
+     '. La fórmula daba '+r.delta.toFixed(3)+' de Δ, queda en '+deltaFinal.toFixed(3)+
+     ' ('+r.pctBase.toFixed(1)+'% → '+r.pct.toFixed(1)+'% al local).</div>':'')+
 
   '<h3><span class="ic">📋</span>Lineups y lesionados</h3>'+
   '<div class="row"><button class="ghost lu" data-pk="'+x.gamePk+'" data-ha="'+esc(a.team.name)+
@@ -1856,16 +1888,21 @@ function detalle(x){
   '<tr><td>'+nomH+' +1.5</td><td class="n">'+pc(1-aPor2)+'</td><td class="n">'+american((1-aPor2)*100)+'</td></tr>'+
   '<tr><td>'+nomH+' −1.5 (gana por 2+)</td><td class="n">'+pc(hPor2)+'</td><td class="n">'+american(hPor2*100)+'</td></tr>'+
   '<tr><td>'+nomA+' +1.5</td><td class="n">'+pc(1-hPor2)+'</td><td class="n">'+american((1-hPor2)*100)+'</td></tr>'+
-  '<tr><td>Ganador según este Poisson</td><td class="n" colspan="2">'+pPoisH.toFixed(1)+'% al local</td></tr>'+
-  (brecha>=4?'<tr><td>Se separa de tu fórmula en</td><td class="n" colspan="2">'+brecha.toFixed(1)+' puntos</td></tr>':'')+
+  '<tr><td>Δ carreras: tu fórmula / método multiplicativo</td><td class="n" colspan="2">'+
+    (deltaFinal>=0?'+':'')+deltaFinal.toFixed(2)+' / '+(deltaMult>=0?'+':'')+deltaMult.toFixed(2)+'</td></tr>'+
+  (brecha>=0.60?'<tr><td>Se separan en</td><td class="n" colspan="2">'+brecha.toFixed(2)+' carreras</td></tr>':'')+
   '</table>'+
   '<div class="leyenda">⚠️ Están los <b>cuatro</b> lados a propósito. Kalshi y los books listan el hándicap '+
   'solo del lado de <b>su</b> favorito, que no siempre es el tuyo. Antes de copiar un precio, lee bien de '+
   'cuál de las cuatro filas es: meter el precio de un lado en la casilla del otro fabrica ventaja que no existe. '+
   'En Kalshi, «X gana por más de 1.5» es la fila <b>X −1.5</b>, y el «No» de ese mismo contrato es la fila '+
-  '<b>del rival +1.5</b>.</div>'+
-  (brecha>=4?'<div class="flag">⚠️ El hándicap sale del Poisson y el ganador sale de tu fórmula, y aquí se separan '+
-    brecha.toFixed(1)+' puntos. Los dos no pueden tener razón a la vez: si juegas el hándicap en este partido, hazlo con medio stake.</div>':'')+
+  '<b>del rival +1.5</b>. Estos números salen del mismo Poisson que el ganador, anclado a tu porcentaje, '+
+  'así que el hándicap y el moneyline ya no se contradicen.</div>'+
+  (brecha>=0.60?'<div class="flag">⚠️ Tu fórmula de pesos dice '+(deltaFinal>=0?'+':'')+deltaFinal.toFixed(2)+
+    ' carreras y el método multiplicativo dice '+(deltaMult>=0?'+':'')+deltaMult.toFixed(2)+
+    '. Son dos maneras independientes de medir lo mismo y se separan '+brecha.toFixed(2)+
+    ' carreras, casi siempre porque un abridor tiene muestra corta o el ERA de bullpen viene raro. '+
+    'Si juegas este partido, hazlo con medio stake.</div>':'')+
   '<div class="row" data-hc="1" data-pf="'+(aPor2*100).toFixed(3)+'" data-pd="'+((1-aPor2)*100).toFixed(3)+
     '" data-nf="'+nomA+'" data-nd="'+nomH+'">'+
     '<label>'+nomA+' −1.5</label><input type="text" class="hf" placeholder="'+ph('+175','36')+'">'+
@@ -2136,6 +2173,14 @@ function pintarAlGane(){
     return;
   }
   lista.sort(function(a,b){ return b.p-a.p; });
+  /* Los picks marcados guardan una copia de sus numeros. Si cambias el
+     multiplicador o el modo de ERA, esa copia queda vieja: hay que refrescarla
+     contra lo recien calculado, y soltar los juegos que ya no aparecen. */
+  for(var kk in COMBI){
+    var fresco=null;
+    lista.forEach(function(z){ if(String(z.pk)===String(kk)) fresco=z; });
+    if(fresco) COMBI[kk]=fresco; else delete COMBI[kk];
+  }
   var o='';
   lista.forEach(function(m,i){
     var alto=(m.vc>=CORTE_SOLIDO), gris=(m.vc<CORTE_GRIS);
